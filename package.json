@@ -1,0 +1,16 @@
+{
+  "name": "wikilite",
+  "version": "1.0.0",
+  "description": "Lightweight wiki",
+  "scripts": {
+    "css": "npx @tailwindcss/cli -i input.css -o public/assets/styles.css"
+  },
+  "private": true,
+  "devDependencies": {
+    "tailwindcss": "^4.1.13"
+  },
+  "dependencies": {
+    "@tailwindcss/cli": "^4.1.13",
+    "@tailwindcss/typography": "^0.5.18"
+  }
+}
