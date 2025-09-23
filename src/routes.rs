@@ -2,17 +2,31 @@ use axum::{
     http::{StatusCode, Uri, header},
     response::{IntoResponse, Response},
 };
-use maud::{Markup, html};
-
+use maud::{Markup, PreEscaped, html};
 use rust_embed::RustEmbed;
 
 #[derive(RustEmbed)]
 #[folder = "public/"]
 struct Assets;
 
+// <link rel="stylesheet" href="https://unpkg.com/easymde/dist/easymde.min.css">
+// <script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
+
 pub async fn home() -> Markup {
     html! {
-        h1 { "Wikilite" }
+        head {
+            link rel = "stylesheet" href = "/assets/easymde.min.css";
+            script src="/assets/easymde.min.js" {}
+        }
+        body {
+            h1 { "Wikilite" }
+            textarea id = "editor" {}
+            script {
+                (PreEscaped(r#"
+                const easyMDE = new EasyMDE({element: document.getElementById("editor")});
+                "#))
+            }
+        }
     }
 }
 
