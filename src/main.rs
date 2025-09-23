@@ -6,6 +6,7 @@ use serde::Deserialize;
 use std::{
     net::SocketAddr,
     path::{Path, PathBuf},
+    time::Duration,
 };
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -140,6 +141,13 @@ async fn run() -> Result<()> {
         .route("/", get(routes::home))
         .route("/assets/{*wildcard}", get(routes::assets));
     let listener = tokio::net::TcpListener::bind(config.bind).await?;
+    tracing::info!("listening on {}", listener.local_addr().unwrap());
+    if args.open {
+        tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(250)).await;
+            open::that("http://localhost:8776").expect("to open URL");
+        });
+    }
     axum::serve(listener, app).await?;
     Ok(())
 }
