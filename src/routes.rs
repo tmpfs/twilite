@@ -1,8 +1,7 @@
 use axum::{
     http::{StatusCode, Uri, header},
-    response::{IntoResponse, Response},
+    response::{IntoResponse, Redirect, Response},
 };
-use maud::{Markup, PreEscaped, html};
 use rust_embed::RustEmbed;
 
 #[derive(RustEmbed)]
@@ -22,21 +21,8 @@ struct Assets;
 //     "#
 // }
 
-pub async fn home() -> Markup {
-    html! {
-        head {
-            link rel = "stylesheet" href = "/assets/easymde.min.css";
-            script src="/assets/easymde.min.js" {}
-        }
-        body {
-            h1 { "Wikilite" }
-            a href="/login/github" {
-                button {
-                    "Login with Github"
-                }
-            }
-        }
-    }
+pub async fn home() -> impl IntoResponse {
+    Redirect::permanent("/index.html")
 }
 
 /*
@@ -49,7 +35,7 @@ pub async fn home() -> Markup {
 */
 
 pub async fn assets(uri: Uri) -> impl IntoResponse {
-    let path = uri.path().trim_start_matches("/assets/");
+    let path = uri.path().trim_start_matches("/");
     match Assets::get(path) {
         Some(content) => {
             let body = content.data;

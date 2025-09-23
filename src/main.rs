@@ -9,7 +9,6 @@ use wikilite::{config::*, migrations, server::Server};
 const DEFAULT_LOG_LEVEL: &str = "wikilite=info";
 
 /// Initialize the tracing subscriber.
-#[cfg(debug_assertions)]
 pub fn init_subscriber(logs_dir: &Path, name: &str, log_level: String) -> Result<()> {
     let logfile = RollingFileAppender::new(Rotation::DAILY, logs_dir, name);
     let env_layer = tracing_subscriber::EnvFilter::new(log_level);

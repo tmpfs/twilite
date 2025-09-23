@@ -55,9 +55,9 @@ impl Server {
         cfg_if::cfg_if!(
             if #[cfg(debug_assertions)] {
                 use tower_http::services::ServeDir;
-                app = app.nest_service("/assets", ServeDir::new("./public"));
+                app = app.fallback_service(ServeDir::new("./public"));
             } else {
-                app = app.route("/assets/{*wildcard}", get(routes::assets));
+                app = app.route("/{*wildcard}", get(routes::assets));
             }
         );
 
