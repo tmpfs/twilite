@@ -1,8 +1,7 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use async_sqlite::{ClientBuilder, JournalMode};
 use axum::{Router, routing::get};
 use clap::Parser;
-use maud::{Markup, html};
 use serde::Deserialize;
 use std::{
     net::SocketAddr,
@@ -10,7 +9,7 @@ use std::{
 };
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-use wikilite::migrations;
+use wikilite::{migrations, routes};
 
 const DEFAULT_LOG_LEVEL: &str = "wikilite=info";
 
@@ -28,6 +27,7 @@ struct WikiLite {
 #[derive(Debug, Deserialize)]
 struct Config {
     bind: SocketAddr,
+    database: Database,
     logs: Logs,
 }
 
@@ -35,7 +35,21 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             bind: "0.0.0.0:8776".parse().unwrap(),
+            database: Database::default(),
             logs: Logs::default(),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct Database {
+    path: String,
+}
+
+impl Default for Database {
+    fn default() -> Self {
+        Self {
+            path: String::from("wikilite.sqlite3"),
         }
     }
 }
@@ -86,12 +100,6 @@ pub fn init_subscriber(logs_dir: &Path, name: &str, log_level: String) -> Result
     Ok(())
 }
 
-async fn home() -> Markup {
-    html! {
-        h1 { "Wikilite" }
-    }
-}
-
 async fn run() -> Result<()> {
     let args = WikiLite::parse();
 
@@ -104,7 +112,8 @@ async fn run() -> Result<()> {
     };
 
     if !config.logs.logs_dir.exists() {
-        std::fs::create_dir_all(&config.logs.logs_dir)?;
+        std::fs::create_dir_all(&config.logs.logs_dir)
+            .with_context(|| "failed to create logs directory")?;
     }
 
     init_subscriber(
@@ -117,16 +126,19 @@ async fn run() -> Result<()> {
     )?;
 
     let mut db_client = ClientBuilder::new()
-        .path("wikilite.sqlite3")
+        .path(config.database.path)
         .journal_mode(JournalMode::Wal)
         .open()
-        .await?;
+        .await
+        .with_context(|| "failed to initialize database")?;
 
     migrations::migrate_client(&mut db_client).await?;
 
     tracing::info!(bind = %config.bind);
 
-    let app = Router::new().route("/", get(home));
+    let app = Router::new()
+        .route("/", get(routes::home))
+        .route("/assets/{*wildcard}", get(routes::assets));
     let listener = tokio::net::TcpListener::bind(config.bind).await?;
     axum::serve(listener, app).await?;
     Ok(())
