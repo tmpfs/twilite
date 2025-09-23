@@ -10,7 +10,7 @@ mod embedded {
 }
 
 /// Run migrations for a connection.
-pub fn migrate_connection(conn: &mut Connection) -> std::result::Result<Report, refinery::Error> {
+fn migrate_connection(conn: &mut Connection) -> std::result::Result<Report, refinery::Error> {
     tracing::debug!("migration::started");
     let report = embedded::migrations::runner().run(conn)?;
     let applied = report.applied_migrations();

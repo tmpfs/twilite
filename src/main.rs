@@ -1,11 +1,10 @@
 use anyhow::{Context, Result};
 use async_sqlite::{ClientBuilder, JournalMode};
-use axum::{Router, routing::get};
 use clap::Parser;
-use std::{path::Path, time::Duration};
+use std::path::{Path, PathBuf};
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-use wikilite::{config::*, migrations, routes};
+use wikilite::{config::*, migrations, server::Server};
 
 const DEFAULT_LOG_LEVEL: &str = "wikilite=info";
 
@@ -13,8 +12,7 @@ const DEFAULT_LOG_LEVEL: &str = "wikilite=info";
 #[cfg(debug_assertions)]
 pub fn init_subscriber(logs_dir: &Path, name: &str, log_level: String) -> Result<()> {
     let logfile = RollingFileAppender::new(Rotation::DAILY, logs_dir, name);
-    let env_layer =
-        tracing_subscriber::EnvFilter::new(std::env::var("RUST_LOG").unwrap_or(log_level));
+    let env_layer = tracing_subscriber::EnvFilter::new(log_level);
 
     let file_layer = tracing_subscriber::fmt::layer()
         .with_file(false)
@@ -42,62 +40,60 @@ async fn run() -> Result<()> {
     let args = WikiLiteCli::parse();
 
     let config = if let Some(config_path) = args.config {
-        let content = std::fs::read(config_path)?;
+        let content = std::fs::read(&config_path)
+            .with_context(|| format!("unsable to read config file {}", config_path.display()))?;
         let content: Config = toml::from_slice(&content)?;
         content
     } else {
         Config::default()
     };
 
-    if !config.logs.logs_dir.exists() {
-        std::fs::create_dir_all(&config.logs.logs_dir)
-            .with_context(|| "failed to create logs directory")?;
-    }
+    let env_path = if let Some(env) = &config.env {
+        env.clone()
+    } else {
+        std::env::current_dir()?.join(".env")
+    };
 
-    init_subscriber(
-        &config.logs.logs_dir,
-        &config.logs.log_file_name,
-        config
-            .logs
-            .log_level
-            .unwrap_or(DEFAULT_LOG_LEVEL.to_string()),
-    )?;
+    dotenv::from_path(&env_path)
+        .with_context(|| format!("unable to load .env file from: {}", env_path.display()))?;
+
+    tracing::info!(database = %config.database.path);
 
     let mut db_client = ClientBuilder::new()
-        .path(config.database.path)
+        .path(&config.database.path)
         .journal_mode(JournalMode::Wal)
         .open()
         .await
-        .with_context(|| "failed to initialize database")?;
+        .with_context(|| format!("unable to initialize database: {}", &config.database.path))?;
 
     migrations::migrate_client(&mut db_client).await?;
-
-    tracing::info!(bind = %config.bind);
-
-    let mut app = Router::new().route("/", get(routes::home));
-    cfg_if::cfg_if!(
-        if #[cfg(debug_assertions)] {
-            use tower_http::services::ServeDir;
-            app = app.nest_service("/assets", ServeDir::new("./public"));
-        } else {
-            app = app.route("/assets/{*wildcard}", get(routes::assets));
-        }
-    );
-
-    let listener = tokio::net::TcpListener::bind(config.bind).await?;
-    tracing::info!("listening on {}", listener.local_addr().unwrap());
-    if args.open {
-        tokio::spawn(async move {
-            tokio::time::sleep(Duration::from_millis(250)).await;
-            open::that("http://localhost:8776").expect("to open URL");
-        });
-    }
-    axum::serve(listener, app).await?;
-    Ok(())
+    Server::start(config, db_client, args.open).await
 }
 
 #[tokio::main]
 async fn main() {
+    let logs_dir = std::env::var("WIKILITE_LOGS_DIR")
+        .ok()
+        .map(PathBuf::from)
+        .unwrap_or(PathBuf::from("logs"));
+
+    if !logs_dir.exists() {
+        std::fs::create_dir_all(&logs_dir).expect("logs directory to exist");
+    }
+
+    let log_file_name = std::env::var("WIKILITE_LOG_FILE_NAME")
+        .ok()
+        .unwrap_or("wikilite.log".to_owned());
+
+    init_subscriber(
+        &logs_dir,
+        &log_file_name,
+        std::env::var("RUST_LOG")
+            .ok()
+            .unwrap_or(DEFAULT_LOG_LEVEL.to_string()),
+    )
+    .expect("to initialize tracing");
+
     if let Err(e) = run().await {
         // eprintln!("{}", e);
         tracing::error!("{}", e);
