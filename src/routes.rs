@@ -9,9 +9,6 @@ use rust_embed::RustEmbed;
 #[folder = "public/"]
 struct Assets;
 
-// <link rel="stylesheet" href="https://unpkg.com/easymde/dist/easymde.min.css">
-// <script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
-
 pub async fn home() -> Markup {
     html! {
         head {
