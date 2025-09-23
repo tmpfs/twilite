@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "Lightweight wiki",
   "scripts": {
-    "css": "npx @tailwindcss/cli -i input.css -o public/assets/styles.css"
+    "css:dev": "npx @tailwindcss/cli -i input.css -o public/assets/styles.css",
+    "css:dist": "npx @tailwindcss/cli -i input.css -o public/assets/styles.css --minify"
   },
   "private": true,
   "devDependencies": {
