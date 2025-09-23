@@ -2,38 +2,37 @@ use crate::{config::Config, routes};
 use anyhow::Result;
 use async_sqlite::Client;
 use axum::{Extension, Router, routing::get};
-use std::sync::Arc;
-use std::time::Duration;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, SystemTime};
+
+#[derive(Clone, Debug)]
+pub struct ItemOauthAxum {
+    pub verifier: String,
+    pub created_at: SystemTime,
+}
 
 #[derive(Clone)]
 pub struct ServerState {
     pub client: Client,
+    pub auth_db: Arc<Mutex<HashMap<String, ItemOauthAxum>>>,
 }
 
 impl ServerState {
-    pub fn get(&self, key: String) -> Option<String> {
-        // let db = self.db.lock().unwrap();
-        // if let Some(item) = db.get(&key) {
-        //     Some(item.verifier.clone())
-        // } else {
-        //     None
-        // }
-        // todo!();
-        println!("get state: {}", key);
-        None
+    pub async fn get(&self, key: String) -> Option<String> {
+        let db = self.auth_db.lock().unwrap();
+        db.get(&key).map(|i| i.verifier.clone())
     }
 
-    pub fn set(&self, key: String, value: String) {
-        // let mut db = self.db.lock().unwrap();
-        // db.insert(
-        //     key,
-        //     ItemOauthAxum {
-        //         verifier: value,
-        //         created_at: SystemTime::now(),
-        //     },
-        // );
-        // todo!();
-        println!("set state: {} = {}", key, value);
+    pub async fn set(&self, key: String, value: String) {
+        let mut db = self.auth_db.lock().unwrap();
+        db.insert(
+            key,
+            ItemOauthAxum {
+                verifier: value,
+                created_at: SystemTime::now(),
+            },
+        );
     }
 }
 
@@ -42,7 +41,10 @@ pub struct Server;
 impl Server {
     /// Start the server.
     pub async fn start(config: Config, client: Client, open: bool) -> Result<()> {
-        let state = Arc::new(ServerState { client });
+        let state = Arc::new(ServerState {
+            client,
+            auth_db: Arc::new(Mutex::new(HashMap::new())),
+        });
 
         tracing::info!(bind = %config.bind);
 
@@ -76,23 +78,28 @@ impl Server {
 }
 
 mod github {
+    use crate::error::ServerError;
+
     use super::ServerState;
+    use anyhow::Result;
     use axum::Extension;
     use axum::extract::Query;
-    use axum::response::Redirect;
+    use axum::response::{IntoResponse, Redirect, Response};
     use oauth_axum::providers::github::GithubProvider;
     use oauth_axum::{CustomProvider, OAuthClient};
     use std::sync::Arc;
 
     #[derive(Clone, serde::Deserialize)]
-    pub struct QueryAxumCallback {
+    pub struct OauthCallback {
         pub code: Option<String>,
         pub state: Option<String>,
     }
 
-    pub async fn login(Extension(state): Extension<Arc<ServerState>>) -> Redirect {
-        let auth_url = create_url(state).await;
-        Redirect::temporary(&auth_url)
+    pub async fn login(
+        Extension(state): Extension<Arc<ServerState>>,
+    ) -> Result<Redirect, ServerError> {
+        let auth_url = create_url(state).await?;
+        Ok(Redirect::temporary(&auth_url))
     }
 
     fn get_client() -> CustomProvider {
@@ -103,35 +110,35 @@ mod github {
         )
     }
 
-    async fn create_url(state: Arc<ServerState>) -> String {
+    async fn create_url(state: Arc<ServerState>) -> Result<String, ServerError> {
         let state_oauth = get_client()
-            .generate_url(Vec::from(["read:user".to_string()]), |state_e| async move {
-                state.set(state_e.state, state_e.verifier);
-            })
-            .await
-            .ok()
-            .unwrap()
+            .generate_url(
+                Vec::from(["read:user".to_string(), "user:email".to_string()]),
+                |state_e| async move {
+                    state.set(state_e.state, state_e.verifier).await;
+                },
+            )
+            .await?
             .state
-            .unwrap();
-
-        state_oauth.url_generated.unwrap()
+            .ok_or(ServerError::GenerateOauthUrl)?;
+        state_oauth
+            .url_generated
+            .ok_or(ServerError::NoGeneratedOauthUrl)
     }
 
     pub async fn callback(
         Extension(state): Extension<Arc<ServerState>>,
-        Query(queries): Query<QueryAxumCallback>,
-    ) -> String {
-        // println!("{:?}", state.get_all_items());
-
+        Query(queries): Query<OauthCallback>,
+    ) -> Result<Response, ServerError> {
         if let (Some(oauth_code), Some(oauth_state)) = (queries.code, queries.state) {
-            let item = state.get(oauth_state.clone());
-            get_client()
+            let item = state.get(oauth_state.clone()).await;
+            let token = get_client()
                 .generate_token(oauth_code, item.unwrap())
-                .await
-                .ok()
-                .unwrap()
+                .await?;
+            println!("Authorized...{}", token);
+            Ok(Redirect::temporary("/").into_response())
         } else {
-            "Cancelled".to_string()
+            Ok(Redirect::temporary("/").into_response())
         }
     }
 }
