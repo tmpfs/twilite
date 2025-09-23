@@ -1,0 +1,18 @@
+[package]
+name = "wikilite"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.100"
+async-sqlite = "0.5.3"
+axum = "0.8.4"
+clap = { version = "4.5.48", features = ["derive", "wrap_help"] }
+maud = { version = "0.27.0", features = ["axum"] }
+refinery = { version = "0.8.16", features = ["rusqlite"] }
+rusqlite = "0.37.0"
+tokio = { version = "1.47.1", features = ["rt-multi-thread"] }
+tracing = "0.1.41"
+
+[patch.crates-io]
+refinery = { git = "https://github.com/rust-db/refinery" }
