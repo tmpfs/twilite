@@ -18,7 +18,9 @@ impl ServerState {
         // } else {
         //     None
         // }
-        todo!();
+        // todo!();
+        println!("get state: {}", key);
+        None
     }
 
     pub fn set(&self, key: String, value: String) {
@@ -30,7 +32,8 @@ impl ServerState {
         //         created_at: SystemTime::now(),
         //     },
         // );
-        todo!();
+        // todo!();
+        println!("set state: {} = {}", key, value);
     }
 }
 
@@ -44,7 +47,8 @@ impl Server {
         tracing::info!(bind = %config.bind);
 
         let mut app = Router::new()
-            .route("/api/v1/github/callback", get(github::callback))
+            .route("/login/github", get(github::login))
+            .route("/api/github/callback", get(github::callback))
             .route("/", get(routes::home));
         cfg_if::cfg_if!(
             if #[cfg(debug_assertions)] {
@@ -75,25 +79,31 @@ mod github {
     use super::ServerState;
     use axum::Extension;
     use axum::extract::Query;
+    use axum::response::Redirect;
     use oauth_axum::providers::github::GithubProvider;
     use oauth_axum::{CustomProvider, OAuthClient};
     use std::sync::Arc;
 
     #[derive(Clone, serde::Deserialize)]
     pub struct QueryAxumCallback {
-        pub code: String,
-        pub state: String,
+        pub code: Option<String>,
+        pub state: Option<String>,
+    }
+
+    pub async fn login(Extension(state): Extension<Arc<ServerState>>) -> Redirect {
+        let auth_url = create_url(state).await;
+        Redirect::temporary(&auth_url)
     }
 
     fn get_client() -> CustomProvider {
         GithubProvider::new(
             std::env::var("GITHUB_CLIENT_ID").expect("GITHUB_CLIENT_ID must be set"),
             std::env::var("GITHUB_SECRET").expect("GITHUB_SECRET must be set"),
-            "http://localhost:8776/api/v1/github/callback".to_string(),
+            "http://localhost:8776/api/github/callback".to_string(),
         )
     }
 
-    pub async fn create_url(Extension(state): Extension<Arc<ServerState>>) -> String {
+    async fn create_url(state: Arc<ServerState>) -> String {
         let state_oauth = get_client()
             .generate_url(Vec::from(["read:user".to_string()]), |state_e| async move {
                 state.set(state_e.state, state_e.verifier);
@@ -112,11 +122,16 @@ mod github {
         Query(queries): Query<QueryAxumCallback>,
     ) -> String {
         // println!("{:?}", state.get_all_items());
-        let item = state.get(queries.state.clone());
-        get_client()
-            .generate_token(queries.code, item.unwrap())
-            .await
-            .ok()
-            .unwrap()
+
+        if let (Some(oauth_code), Some(oauth_state)) = (queries.code, queries.state) {
+            let item = state.get(oauth_state.clone());
+            get_client()
+                .generate_token(oauth_code, item.unwrap())
+                .await
+                .ok()
+                .unwrap()
+        } else {
+            "Cancelled".to_string()
+        }
     }
 }

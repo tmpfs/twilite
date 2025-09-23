@@ -9,6 +9,19 @@ use rust_embed::RustEmbed;
 #[folder = "public/"]
 struct Assets;
 
+// async fn index() -> impl IntoResponse {
+//     // Show "Login with GitHub" button
+//     r#"
+//     <html>
+//         <body>
+//             <a href="/login/github">
+//                 <button>Login with GitHub</button>
+//             </a>
+//         </body>
+//     </html>
+//     "#
+// }
+
 pub async fn home() -> Markup {
     html! {
         head {
@@ -17,15 +30,23 @@ pub async fn home() -> Markup {
         }
         body {
             h1 { "Wikilite" }
+            a href="/login/github" {
+                button {
+                    "Login with Github"
+                }
+            }
+        }
+    }
+}
+
+/*
             textarea id = "editor" {}
             script {
                 (PreEscaped(r#"
                 const easyMDE = new EasyMDE({element: document.getElementById("editor")});
                 "#))
             }
-        }
-    }
-}
+*/
 
 pub async fn assets(uri: Uri) -> impl IntoResponse {
     let path = uri.path().trim_start_matches("/assets/");
