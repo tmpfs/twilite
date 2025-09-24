@@ -31,7 +31,7 @@ const formSchema = z.object({
     }),
 });
 
-export function PageForm() {
+export function PageForm({onSuccess}: {onSuccess: (pageName: string) => void}) {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -43,9 +43,6 @@ export function PageForm() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setStatus("loading");
-
-    console.log(values);
-
     const formData = toFormData(values);
     try {
       const res = await fetch("/api/page", {
@@ -58,6 +55,7 @@ export function PageForm() {
       console.log(res);
 
       setStatus("success");
+      onSuccess(values.pageName);
     } catch (err) {
       console.error(err);
       setStatus("error");

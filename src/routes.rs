@@ -1,9 +1,9 @@
 use crate::{error::ServerError, helpers::sanitize_html, server::ServerState};
 use axum::{
     Extension,
-    extract::Multipart,
+    extract::{Multipart, Path},
     http::{StatusCode, Uri, header},
-    response::{IntoResponse, Redirect, Response},
+    response::{Html, IntoResponse, Redirect, Response},
 };
 use rust_embed::RustEmbed;
 use sql_query_builder as sql;
@@ -14,7 +14,31 @@ use time::{UtcDateTime, format_description::well_known::Rfc3339};
 #[folder = "app/out"]
 struct Assets;
 
-pub async fn api_page(
+pub async fn api_select_page(
+    Extension(state): Extension<Arc<ServerState>>,
+    Path(page_name): Path<String>,
+) -> Result<Response, ServerError> {
+    let query = sql::Select::new()
+        .select("page_content")
+        .from("pages")
+        .where_clause("page_name = ?1");
+    let client = state.client.lock().await;
+    let content: Result<String, async_sqlite::Error> = client
+        .conn(move |conn| {
+            let mut stmt = conn.prepare_cached(&query.as_string())?;
+            stmt.query_row([page_name], |row| row.get(0))
+        })
+        .await;
+    match content {
+        Ok(page_content) => Ok(Html(page_content).into_response()),
+        Err(async_sqlite::Error::Rusqlite(async_sqlite::rusqlite::Error::QueryReturnedNoRows)) => {
+            Ok(StatusCode::NOT_FOUND.into_response())
+        }
+        Err(e) => Err(e.into()),
+    }
+}
+
+pub async fn api_insert_page(
     Extension(state): Extension<Arc<ServerState>>,
     mut multipart: Multipart,
 ) -> Result<Response, ServerError> {

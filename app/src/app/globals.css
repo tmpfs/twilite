@@ -130,3 +130,13 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+@plugin "@tailwindcss/typography";
+
+.prose h1, h2, h3, h4, h5, h6 {
+  color: var(--muted-foreground);
+}
+
+.prose p {
+  color: var(--secondary-foreground);
+}
