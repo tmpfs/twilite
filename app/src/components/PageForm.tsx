@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
+import { useState } from 'react';
 import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import {
@@ -15,17 +16,23 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { MarkdownInput } from "@/components/MarkdownEditor"
+import { toFormData } from '@/lib/utils';
 
 const formSchema = z.object({
-  pageName: z.string().min(2, {
-    message: "Page name must be at least 2 characters.",
-  }),
-  pageContent: z.string().min(2, {
-    message: "Page content must be text.",
-  }),
-})
+  pageName: z
+    .string()
+    .regex(/^[A-Z][a-zA-Z0-9]*$/, {
+      message: "Page name must be in CamelCase (e.g., MyPageName).",
+    }),
+  pageContent: z
+    .string()
+    .refine((val) => val.trim().length > 0, {
+      message: "Page content must not be empty or whitespace.",
+    }),
+});
 
 export function PageForm() {
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -34,8 +41,25 @@ export function PageForm() {
     },
   })
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values)
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    setStatus("loading");
+
+    console.log(values);
+
+    const formData = toFormData(values);
+    try {
+      const res = await fetch("/api/page", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error("Network error");
+
+      setStatus("success");
+    } catch (err) {
+      console.error(err);
+      setStatus("error");
+    }
   }
 
   return (
