@@ -79,7 +79,7 @@ impl Server {
                     ServiceBuilder::new()
                         .layer(middleware::from_fn(set_static_cache_control))
                         .service(
-                            ServeDir::new("./public")
+                            ServeDir::new("./app/out")
                         )
                     );
             } else {
