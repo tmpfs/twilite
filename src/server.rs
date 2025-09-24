@@ -1,10 +1,15 @@
 use crate::{config::Config, routes};
 use anyhow::Result;
 use async_sqlite::Client;
+use axum::body::Body;
+use axum::http::{HeaderValue, Request, StatusCode, header};
+use axum::middleware::{self, Next};
+use axum::response::{IntoResponse, Response};
 use axum::{Extension, Router, routing::get};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
+use tower::{ServiceBuilder, ServiceExt};
 
 #[derive(Clone, Debug)]
 pub struct ItemOauthAxum {
@@ -36,6 +41,21 @@ impl ServerState {
     }
 }
 
+/// Don't cache static assets in debug mode.
+async fn set_static_cache_control(request: Request<Body>, next: Next) -> Response {
+    let mut response = next.run(request).await;
+    response
+        .headers_mut()
+        .insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    response
+        .headers_mut()
+        .insert(header::PRAGMA, HeaderValue::from_static("no-cache"));
+    response
+        .headers_mut()
+        .insert(header::EXPIRES, HeaderValue::from_static("0"));
+    response
+}
+
 pub struct Server;
 
 impl Server {
@@ -55,7 +75,13 @@ impl Server {
         cfg_if::cfg_if!(
             if #[cfg(debug_assertions)] {
                 use tower_http::services::ServeDir;
-                app = app.fallback_service(ServeDir::new("./public"));
+                app = app.fallback_service(
+                    ServiceBuilder::new()
+                        .layer(middleware::from_fn(set_static_cache_control))
+                        .service(
+                            ServeDir::new("./public")
+                        )
+                    );
             } else {
                 app = app.route("/{*wildcard}", get(routes::assets));
             }
