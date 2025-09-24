@@ -1665,6 +1665,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
 
 [[package]]
+name = "sql_query_builder"
+version = "2.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2651412ae7213fc4eb36349c204614c0aee7d7cef23328e10101413781b4b200"
+
+[[package]]
 name = "stable_deref_trait"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2312,6 +2318,9 @@ dependencies = [
  "rusqlite",
  "rust-embed",
  "serde",
+ "sql_query_builder",
+ "thiserror 2.0.16",
+ "time",
  "tokio",
  "toml 0.9.7",
  "tower",

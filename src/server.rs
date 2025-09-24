@@ -10,8 +10,9 @@ use axum::{
     routing::{get, post},
 };
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::{Duration, SystemTime};
+use tokio::sync::Mutex;
 use tower::ServiceBuilder;
 
 #[derive(Clone, Debug)]
@@ -22,18 +23,18 @@ pub struct ItemOauthAxum {
 
 #[derive(Clone)]
 pub struct ServerState {
-    pub client: Client,
+    pub client: Arc<Mutex<Client>>,
     pub auth_db: Arc<Mutex<HashMap<String, ItemOauthAxum>>>,
 }
 
 impl ServerState {
     pub async fn get(&self, key: String) -> Option<String> {
-        let db = self.auth_db.lock().unwrap();
+        let db = self.auth_db.lock().await;
         db.get(&key).map(|i| i.verifier.clone())
     }
 
     pub async fn set(&self, key: String, value: String) {
-        let mut db = self.auth_db.lock().unwrap();
+        let mut db = self.auth_db.lock().await;
         db.insert(
             key,
             ItemOauthAxum {
@@ -65,7 +66,7 @@ impl Server {
     /// Start the server.
     pub async fn start(config: Config, client: Client, open: bool) -> Result<()> {
         let state = Arc::new(ServerState {
-            client,
+            client: Arc::new(Mutex::new(client)),
             auth_db: Arc::new(Mutex::new(HashMap::new())),
         });
 

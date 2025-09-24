@@ -1,9 +1,16 @@
+use std::sync::Arc;
+
 use axum::{
+    Extension,
     extract::Multipart,
     http::{StatusCode, Uri, header},
     response::{IntoResponse, Redirect, Response},
 };
 use rust_embed::RustEmbed;
+use time::{UtcDateTime, format_description::well_known::Rfc3339};
+
+use crate::{error::ServerError, server::ServerState};
+use sql_query_builder as sql;
 
 #[derive(RustEmbed)]
 #[folder = "public/"]
@@ -18,7 +25,10 @@ pub struct PageForm {
 }
 */
 
-pub async fn api_page(mut multipart: Multipart) -> impl IntoResponse {
+pub async fn api_page(
+    Extension(state): Extension<Arc<ServerState>>,
+    mut multipart: Multipart,
+) -> Result<Response, ServerError> {
     let mut page_name = None;
     let mut page_content = None;
 
@@ -33,10 +43,28 @@ pub async fn api_page(mut multipart: Multipart) -> impl IntoResponse {
         }
     }
 
-    format!(
-        "Got pageName = {:?}, pageContent = {:?}",
-        page_name, page_content
-    )
+    let (Some(page_name), Some(page_content)) = (page_name, page_content) else {
+        return Ok(StatusCode::BAD_REQUEST.into_response());
+    };
+
+    let query = sql::Insert::new()
+        .insert_into("pages (created_at, updated_at, page_name, page_content)")
+        .values("(?1, ?2, ?3, ?4)");
+
+    let now = UtcDateTime::now();
+    let created_at = now.format(&Rfc3339)?;
+    let updated_at = now.format(&Rfc3339)?;
+
+    let client = state.client.lock().await;
+    client
+        .conn(move |conn| {
+            let mut stmt = conn.prepare_cached(&query.as_string())?;
+            stmt.execute((created_at, updated_at, page_name, page_content))?;
+            Ok(())
+        })
+        .await?;
+
+    Ok(StatusCode::OK.into_response())
 }
 
 pub async fn home() -> impl IntoResponse {
