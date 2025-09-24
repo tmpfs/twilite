@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import "./globals.css";
-
 import { Header } from "@/components/Header";
 import { ThemeProvider } from "@/components/theme-provider";
 
@@ -24,14 +23,10 @@ export default function RootLayout({
       >
         <body className="flex flex-col">
           <Header />
-          <main>
-          {children}
-          </main>
-          <footer>
-          </footer>
+          <main>{children}</main>
+          <footer></footer>
         </body>
       </ThemeProvider>
-
     </html>
   );
 }
