@@ -55,6 +55,8 @@ export function PageForm() {
 
       if (!res.ok) throw new Error("Network error");
 
+      console.log(res);
+
       setStatus("success");
     } catch (err) {
       console.error(err);

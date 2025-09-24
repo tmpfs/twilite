@@ -2,14 +2,17 @@ use crate::{config::Config, routes};
 use anyhow::Result;
 use async_sqlite::Client;
 use axum::body::Body;
-use axum::http::{HeaderValue, Request, StatusCode, header};
+use axum::http::{HeaderValue, Request, header};
 use axum::middleware::{self, Next};
-use axum::response::{IntoResponse, Response};
-use axum::{Extension, Router, routing::get};
+use axum::response::Response;
+use axum::{
+    Extension, Router,
+    routing::{get, post},
+};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
-use tower::{ServiceBuilder, ServiceExt};
+use tower::ServiceBuilder;
 
 #[derive(Clone, Debug)]
 pub struct ItemOauthAxum {
@@ -70,6 +73,7 @@ impl Server {
 
         let mut app = Router::new()
             .route("/login/github", get(github::login))
+            .route("/api/page", post(routes::api_page))
             .route("/api/github/callback", get(github::callback))
             .route("/", get(routes::home));
         cfg_if::cfg_if!(

@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.100"
 async-sqlite = "0.5.3"
-axum = "0.8.4"
+axum = {version = "0.8.4", features = ["multipart"] }
 cfg-if = "1.0.3"
 clap = { version = "4.5.48", features = ["derive", "wrap_help"] }
 dotenv = "0.15.0"

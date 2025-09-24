@@ -1,4 +1,5 @@
 use axum::{
+    extract::Multipart,
     http::{StatusCode, Uri, header},
     response::{IntoResponse, Redirect, Response},
 };
@@ -8,31 +9,39 @@ use rust_embed::RustEmbed;
 #[folder = "public/"]
 struct Assets;
 
-// async fn index() -> impl IntoResponse {
-//     // Show "Login with GitHub" button
-//     r#"
-//     <html>
-//         <body>
-//             <a href="/login/github">
-//                 <button>Login with GitHub</button>
-//             </a>
-//         </body>
-//     </html>
-//     "#
-// }
+/*
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PageForm {
+    page_name: String,
+    page_content: String,
+}
+*/
+
+pub async fn api_page(mut multipart: Multipart) -> impl IntoResponse {
+    let mut page_name = None;
+    let mut page_content = None;
+
+    while let Some(field) = multipart.next_field().await.unwrap() {
+        let name = field.name().unwrap().to_string();
+        let value = field.text().await.unwrap();
+
+        match name.as_str() {
+            "pageName" => page_name = Some(value),
+            "pageContent" => page_content = Some(value),
+            _ => {}
+        }
+    }
+
+    format!(
+        "Got pageName = {:?}, pageContent = {:?}",
+        page_name, page_content
+    )
+}
 
 pub async fn home() -> impl IntoResponse {
     Redirect::permanent("/index.html")
 }
-
-/*
-            textarea id = "editor" {}
-            script {
-                (PreEscaped(r#"
-                const easyMDE = new EasyMDE({element: document.getElementById("editor")});
-                "#))
-            }
-*/
 
 pub async fn assets(uri: Uri) -> impl IntoResponse {
     let path = uri.path().trim_start_matches("/");
