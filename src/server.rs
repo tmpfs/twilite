@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use tokio::sync::Mutex;
-use tower::ServiceBuilder;
+use tower::{ServiceBuilder, ServiceExt};
 
 #[derive(Clone, Debug)]
 pub struct ItemOauthAxum {
@@ -77,6 +77,26 @@ impl Server {
             .route("/api/page", post(routes::api_page))
             .route("/api/github/callback", get(github::callback))
             .route("/", get(routes::home));
+
+        cfg_if::cfg_if!(
+            if #[cfg(debug_assertions)] {
+                use tower_http::services::ServeFile;
+                async fn asset_wiki_index() -> impl axum::response::IntoResponse {
+                    // Build the ServeFile service
+                    let service = ServiceBuilder::new()
+                        .layer(middleware::from_fn(set_static_cache_control))
+                        .service(ServeFile::new("./app/out/wiki/index.html"));
+
+                    // Call the service manually
+                    let req = Request::builder().body(Body::empty()).unwrap();
+                    service.oneshot(req).await.unwrap()
+                }
+                app = app.route("/wiki/{*wildcard}", get(asset_wiki_index))
+            } else {
+                app = app.route("/wiki/{*wildcard}", get(routes::asset_wiki_index));
+            }
+        );
+
         cfg_if::cfg_if!(
             if #[cfg(debug_assertions)] {
                 use tower_http::services::ServeDir;

@@ -1,7 +1,7 @@
 use crate::{error::ServerError, helpers::sanitize_html, server::ServerState};
 use axum::{
     Extension,
-    extract::Multipart,
+    extract::{Multipart, Path},
     http::{StatusCode, Uri, header},
     response::{IntoResponse, Redirect, Response},
 };
@@ -9,9 +9,10 @@ use rust_embed::RustEmbed;
 use sql_query_builder as sql;
 use std::sync::Arc;
 use time::{UtcDateTime, format_description::well_known::Rfc3339};
+use tower_http::services::ServeFile;
 
 #[derive(RustEmbed)]
-#[folder = "public/"]
+#[folder = "app/out"]
 struct Assets;
 
 pub async fn api_page(
@@ -61,7 +62,25 @@ pub async fn home() -> impl IntoResponse {
 }
 
 pub async fn assets(uri: Uri) -> impl IntoResponse {
-    let path = uri.path().trim_start_matches("/");
+    let mut path = uri.path().trim_start_matches("/").to_owned();
+    if path.ends_with('/') {
+        path.push_str("index.html");
+    }
+    match Assets::get(&path) {
+        Some(content) => {
+            let body = content.data;
+            let mime = mime_guess::from_path(path).first_or_octet_stream();
+            Response::builder()
+                .header(header::CONTENT_TYPE, mime.as_ref())
+                .body(body.into())
+                .unwrap()
+        }
+        None => (StatusCode::NOT_FOUND, "Not Found").into_response(),
+    }
+}
+
+pub async fn asset_wiki_index() -> impl IntoResponse {
+    let path = "wiki/index.html";
     match Assets::get(path) {
         Some(content) => {
             let body = content.data;
