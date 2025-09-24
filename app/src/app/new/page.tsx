@@ -1,8 +1,8 @@
 
-import { MarkdownEditor } from "@/components/MarkdownEditor";
+import { PageForm } from "@/components/PageForm";
 
 export default function NewPage() {
   return (
-    <MarkdownEditor />
+    <PageForm />
   );
 }
