@@ -1,5 +1,4 @@
-use std::sync::Arc;
-
+use crate::{error::ServerError, helpers::sanitize_html, server::ServerState};
 use axum::{
     Extension,
     extract::Multipart,
@@ -7,23 +6,13 @@ use axum::{
     response::{IntoResponse, Redirect, Response},
 };
 use rust_embed::RustEmbed;
-use time::{UtcDateTime, format_description::well_known::Rfc3339};
-
-use crate::{error::ServerError, server::ServerState};
 use sql_query_builder as sql;
+use std::sync::Arc;
+use time::{UtcDateTime, format_description::well_known::Rfc3339};
 
 #[derive(RustEmbed)]
 #[folder = "public/"]
 struct Assets;
-
-/*
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PageForm {
-    page_name: String,
-    page_content: String,
-}
-*/
 
 pub async fn api_page(
     Extension(state): Extension<Arc<ServerState>>,
@@ -54,7 +43,7 @@ pub async fn api_page(
     let now = UtcDateTime::now();
     let created_at = now.format(&Rfc3339)?;
     let updated_at = now.format(&Rfc3339)?;
-
+    let page_content = sanitize_html(&page_content);
     let client = state.client.lock().await;
     client
         .conn(move |conn| {
