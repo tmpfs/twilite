@@ -1,7 +1,7 @@
 use crate::{error::ServerError, helpers::sanitize_html, server::ServerState};
 use axum::{
     Extension,
-    extract::{Multipart, Path},
+    extract::Multipart,
     http::{StatusCode, Uri, header},
     response::{IntoResponse, Redirect, Response},
 };
@@ -9,7 +9,6 @@ use rust_embed::RustEmbed;
 use sql_query_builder as sql;
 use std::sync::Arc;
 use time::{UtcDateTime, format_description::well_known::Rfc3339};
-use tower_http::services::ServeFile;
 
 #[derive(RustEmbed)]
 #[folder = "app/out"]

@@ -1,10 +1,6 @@
 use crate::{config::Config, routes};
 use anyhow::Result;
 use async_sqlite::Client;
-use axum::body::Body;
-use axum::http::{HeaderValue, Request, header};
-use axum::middleware::{self, Next};
-use axum::response::Response;
 use axum::{
     Extension, Router,
     routing::{get, post},
@@ -13,7 +9,14 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use tokio::sync::Mutex;
-use tower::{ServiceBuilder, ServiceExt};
+
+#[cfg(debug_assertions)]
+use axum::{
+    body::Body,
+    http::{HeaderValue, Request, header},
+    middleware::{self, Next},
+    response::Response,
+};
 
 #[derive(Clone, Debug)]
 pub struct ItemOauthAxum {
@@ -46,6 +49,7 @@ impl ServerState {
 }
 
 /// Don't cache static assets in debug mode.
+#[cfg(debug_assertions)]
 async fn set_static_cache_control(request: Request<Body>, next: Next) -> Response {
     let mut response = next.run(request).await;
     response
@@ -77,6 +81,9 @@ impl Server {
             .route("/api/page", post(routes::api_page))
             .route("/api/github/callback", get(github::callback))
             .route("/", get(routes::home));
+
+        #[cfg(debug_assertions)]
+        use tower::{ServiceBuilder, ServiceExt};
 
         cfg_if::cfg_if!(
             if #[cfg(debug_assertions)] {
