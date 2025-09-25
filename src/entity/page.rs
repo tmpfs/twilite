@@ -2,7 +2,7 @@ use crate::{
     error::ServerError,
     helpers::{html_to_text, sanitize_html},
 };
-use async_sqlite::Client;
+use async_sqlite::{Client, Error::Rusqlite, rusqlite};
 use sql_query_builder as sql;
 use time::{UtcDateTime, format_description::well_known::Rfc3339};
 use uuid::Uuid;
@@ -52,11 +52,8 @@ impl PageEntity {
         {
             Ok(_) => Ok(()),
             Err(e) => match e {
-                async_sqlite::Error::Rusqlite(async_sqlite::rusqlite::Error::SqliteFailure(
-                    err,
-                    _,
-                )) => {
-                    if err.code == async_sqlite::rusqlite::ErrorCode::ConstraintViolation {
+                Rusqlite(rusqlite::Error::SqliteFailure(err, _)) => {
+                    if err.code == rusqlite::ErrorCode::ConstraintViolation {
                         Err(ServerError::Conflict)
                     } else {
                         Err(e.into())
@@ -121,9 +118,7 @@ impl PageEntity {
 
         match content {
             Ok(entity) => Ok(entity),
-            Err(async_sqlite::Error::Rusqlite(
-                async_sqlite::rusqlite::Error::QueryReturnedNoRows,
-            )) => Err(ServerError::NotFound),
+            Err(Rusqlite(rusqlite::Error::QueryReturnedNoRows)) => Err(ServerError::NotFound),
             Err(e) => Err(e.into()),
         }
     }
