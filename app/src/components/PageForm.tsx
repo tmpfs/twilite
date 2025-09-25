@@ -8,16 +8,25 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { MarkdownInput } from "@/components/MarkdownEditor";
 import { toFormData } from "@/lib/utils";
 import type { Page } from "@/lib/model";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const formSchema = z.object({
   pageName: z.string().regex(/^[A-Z][a-zA-Z0-9]*$/, {
@@ -130,13 +139,32 @@ export function PageForm({
         />
         <div className={`flex ${edit ? "justify-between" : "justify-end"}`}>
           {edit && (
-            <Button variant="destructive" onClick={deletePage}>
-              Delete
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger>
+                <Button type="button" variant="destructive">
+                  Delete
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete
+                    the wiki page.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={deletePage}>
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           )}
           <div className="space-x-4">
             {edit && (
-              <Button variant="secondary" onClick={cancel}>
+              <Button type="button" variant="secondary" onClick={cancel}>
                 Cancel
               </Button>
             )}
