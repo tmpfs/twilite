@@ -84,24 +84,39 @@ impl Server {
             .route("/", get(routes::home));
 
         #[cfg(debug_assertions)]
-        use tower::{ServiceBuilder, ServiceExt};
+        use {
+            tower::{ServiceBuilder, ServiceExt},
+            tower_http::services::ServeFile,
+        };
 
         cfg_if::cfg_if!(
             if #[cfg(debug_assertions)] {
-                use tower_http::services::ServeFile;
                 async fn asset_wiki_index() -> impl axum::response::IntoResponse {
-                    // Build the ServeFile service
                     let service = ServiceBuilder::new()
                         .layer(middleware::from_fn(set_static_cache_control))
                         .service(ServeFile::new("./app/out/wiki/index.html"));
-
-                    // Call the service manually
                     let req = Request::builder().body(Body::empty()).unwrap();
                     service.oneshot(req).await.unwrap()
                 }
                 app = app.route("/wiki/{*wildcard}", get(asset_wiki_index))
             } else {
                 app = app.route("/wiki/{*wildcard}", get(routes::asset_wiki_index));
+            }
+        );
+
+        cfg_if::cfg_if!(
+            if #[cfg(debug_assertions)] {
+                async fn asset_edit_index() -> impl axum::response::IntoResponse {
+                    let service = ServiceBuilder::new()
+                        .layer(middleware::from_fn(set_static_cache_control))
+                        .service(ServeFile::new("./app/out/edit/index.html"));
+
+                    let req = Request::builder().body(Body::empty()).unwrap();
+                    service.oneshot(req).await.unwrap()
+                }
+                app = app.route("/edit/{*wildcard}", get(asset_edit_index))
+            } else {
+                app = app.route("/edit/{*wildcard}", get(routes::asset_edit_index));
             }
         );
 

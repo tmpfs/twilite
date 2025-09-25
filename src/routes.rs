@@ -102,8 +102,17 @@ pub async fn assets(uri: Uri) -> impl IntoResponse {
     }
 }
 
+pub async fn asset_edit_index() -> impl IntoResponse {
+    let path = "edit/index.html";
+    serve_embedded(path).await
+}
+
 pub async fn asset_wiki_index() -> impl IntoResponse {
     let path = "wiki/index.html";
+    serve_embedded(path).await
+}
+
+async fn serve_embedded(path: &str) -> impl IntoResponse {
     match Assets::get(path) {
         Some(content) => {
             let body = content.data;
