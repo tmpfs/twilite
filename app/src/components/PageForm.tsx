@@ -33,10 +33,12 @@ export function PageForm({
   page,
   edit,
   onDelete,
+  onCancel,
 }: {
   page: Page;
   edit?: boolean;
   onDelete?: () => void;
+  onCancel?: () => void;
   onSuccess: (pageName: string) => void;
 }) {
   const [status, setStatus] = useState<
@@ -71,6 +73,11 @@ export function PageForm({
       setStatus("error");
     }
   }
+
+  const cancel = (e: any) => {
+    e.preventDefault();
+    if (onCancel) onCancel();
+  };
 
   const deletePage = async (e: any) => {
     e.preventDefault();
@@ -127,7 +134,14 @@ export function PageForm({
               Delete
             </Button>
           )}
-          <Button type="submit">Save</Button>
+          <div className="space-x-4">
+            {edit && (
+              <Button variant="secondary" onClick={cancel}>
+                Cancel
+              </Button>
+            )}
+            <Button type="submit">Save</Button>
+          </div>
         </div>
       </form>
     </Form>

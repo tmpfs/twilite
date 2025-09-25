@@ -38,16 +38,20 @@ export default function EditPage() {
     fetchData();
   }, ["pageName"]);
 
-  if (segments.length < 2) {
-    return <NotFound />;
-  }
-
   const onDelete = () => {
     router.push("/");
   };
 
+  const onCancel = () => {
+    router.push(`/wiki/${data?.pageName}`);
+  };
+
   if (loading) return <p>Loading...</p>;
   if (error) return <p>Error: {error}</p>;
+
+  if (segments.length < 2) {
+    return <NotFound />;
+  }
 
   console.log(data);
 
@@ -57,6 +61,7 @@ export default function EditPage() {
         page={data as Page}
         edit
         onDelete={onDelete}
+        onCancel={onCancel}
         onSuccess={(pageName) => router.push(`/wiki/${pageName}`)}
       />
     </NoSsr>

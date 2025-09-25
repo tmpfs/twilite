@@ -65,7 +65,8 @@ function WikiPage({ pageName }: { pageName: string }) {
 
   return (
     <div className="flex flex-col px-4">
-      <div className="flex justify-end space-x-4">
+      <div className="flex justify-between space-x-4">
+        <h3 className="mt-2">{pageName}</h3>
         <Button
           onClick={() => router.push(`/edit/${pageName}`)}
           variant="link"

@@ -152,7 +152,7 @@ pub async fn api_insert_page(
     let page_uuid = Uuid::new_v4();
     let page_content = sanitize_html(&page_content);
     let client = state.client.lock().await;
-    client
+    match client
         .conn(move |conn| {
             let mut stmt = conn.prepare_cached(&query.as_string())?;
             stmt.execute((
@@ -164,16 +164,27 @@ pub async fn api_insert_page(
             ))?;
             Ok(())
         })
-        .await?;
-
-    Ok(StatusCode::OK.into_response())
+        .await
+    {
+        Ok(_) => Ok(StatusCode::OK.into_response()),
+        Err(e) => match e {
+            async_sqlite::Error::Rusqlite(async_sqlite::rusqlite::Error::SqliteFailure(err, _)) => {
+                if err.code == async_sqlite::rusqlite::ErrorCode::ConstraintViolation {
+                    Ok(StatusCode::CONFLICT.into_response())
+                } else {
+                    Err(e.into())
+                }
+            }
+            _ => Err(e.into()),
+        },
+    }
 }
 
 pub async fn api_update_page(
     Extension(state): Extension<Arc<ServerState>>,
+    Path(page_uuid): Path<Uuid>,
     mut multipart: Multipart,
 ) -> Result<Response, ServerError> {
-    let mut page_id = None;
     let mut page_name = None;
     let mut page_content = None;
 
@@ -182,22 +193,20 @@ pub async fn api_update_page(
         let value = field.text().await.unwrap();
 
         match name.as_str() {
-            "pageId" => page_id = Some(value),
             "pageName" => page_name = Some(value),
             "pageContent" => page_content = Some(value),
             _ => {}
         }
     }
 
-    let (Some(page_id), Some(page_name), Some(page_content)) = (page_id, page_name, page_content)
-    else {
+    let (Some(page_name), Some(page_content)) = (page_name, page_content) else {
         return Ok(StatusCode::BAD_REQUEST.into_response());
     };
 
     let query = sql::Update::new()
         .update("pages")
         .set("updated_at = ?1, page_name = ?2, page_content = ?3")
-        .where_clause("page_id = ?4");
+        .where_clause("page_uuid = ?4");
 
     let now = UtcDateTime::now();
     let updated_at = now.format(&Rfc3339)?;
@@ -206,7 +215,7 @@ pub async fn api_update_page(
     client
         .conn(move |conn| {
             let mut stmt = conn.prepare_cached(&query.as_string())?;
-            stmt.execute((updated_at, page_name, page_content, page_id))?;
+            stmt.execute((updated_at, page_name, page_content, page_uuid.to_string()))?;
             Ok(())
         })
         .await?;

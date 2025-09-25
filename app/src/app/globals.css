@@ -4,7 +4,9 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "FreeSans", "Noto Sans", sans-serif;
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+    Cantarell, "FreeSans", "Noto Sans", sans-serif;
   --breakpoint-3xl: 120rem;
 
   --color-sidebar-ring: var(--sidebar-ring);
@@ -133,10 +135,22 @@ body {
 
 @plugin "@tailwindcss/typography";
 
-.prose h1, h2, h3, h4, h5, h6 {
+.prose h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   color: var(--muted-foreground);
 }
 
-.prose p {
+.prose p,
+strong,
+em,
+code {
   color: var(--secondary-foreground);
+}
+
+.prose pre {
+  background-color: var(--secondary);
 }
