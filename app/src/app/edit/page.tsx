@@ -6,11 +6,14 @@ import NoSsr from "@/components/NoSsr";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { Page } from "@/lib/model";
+import { toast } from "sonner";
+import { useFlashToast } from "@/context/toast";
 
 export default function EditPage() {
-  const [data, setData] = useState<Page | undefined>();
+  const [page, setPage] = useState<Page | undefined>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { flashToastAndNavigate } = useFlashToast();
 
   const pathname = usePathname();
   const segments = pathname.split("/").filter(Boolean);
@@ -26,8 +29,8 @@ export default function EditPage() {
         if (!res.ok) {
           throw new Error(`HTTP request failed with status code ${res.status}`);
         }
-        const data = await res.json();
-        setData(data);
+        const page = await res.json();
+        setPage(page);
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -39,11 +42,32 @@ export default function EditPage() {
   }, ["pageName"]);
 
   const onDelete = () => {
+    toast(`Wiki page ${page?.pageName} deleted`, { duration: 15000 });
     router.push("/");
+
+    flashToastAndNavigate(
+      {
+        type: "success",
+        title: "Page deleted!",
+        description: `Wiki page ${pageName} was deleted`,
+      },
+      `/wiki/`,
+    );
+  };
+
+  const onSuccess = (pageName: string) => {
+    flashToastAndNavigate(
+      {
+        type: "success",
+        title: "Page updated!",
+        description: `Wiki page ${pageName} was updated`,
+      },
+      `/wiki/${pageName}`,
+    );
   };
 
   const onCancel = () => {
-    router.push(`/wiki/${data?.pageName}`);
+    router.push(`/wiki/${page?.pageName}`);
   };
 
   if (loading) return <p>Loading...</p>;
@@ -53,16 +77,14 @@ export default function EditPage() {
     return <NotFound />;
   }
 
-  console.log(data);
-
   return (
     <NoSsr>
       <PageForm
-        page={data as Page}
+        page={page as Page}
         edit
         onDelete={onDelete}
         onCancel={onCancel}
-        onSuccess={(pageName) => router.push(`/wiki/${pageName}`)}
+        onSuccess={onSuccess}
       />
     </NoSsr>
   );

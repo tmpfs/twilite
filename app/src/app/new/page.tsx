@@ -3,18 +3,29 @@
 import NoSsr from "@/components/NoSsr";
 import { PageForm } from "@/components/PageForm";
 import { useRouter, usePathname } from "next/navigation";
+import { useFlashToast } from "@/context/toast";
 
 export default function NewPage() {
   const pathname = usePathname();
   const segments = pathname.split("/").filter(Boolean);
   const router = useRouter();
   const page = { pageName: segments[1] || "", pageContent: "" };
+  const { flashToastAndNavigate } = useFlashToast();
+
+  const onSuccess = (pageName: string) => {
+    flashToastAndNavigate(
+      {
+        type: "success",
+        title: "Page created!",
+        description: `Wiki page ${pageName} was created`,
+      },
+      `/wiki/${pageName}`,
+    );
+  };
+
   return (
     <NoSsr>
-      <PageForm
-        page={page}
-        onSuccess={(pageName) => router.push(`/wiki/${pageName}`)}
-      />
+      <PageForm page={page} onSuccess={onSuccess} />
     </NoSsr>
   );
 }

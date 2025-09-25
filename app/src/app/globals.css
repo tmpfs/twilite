@@ -52,7 +52,6 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
 }
 
 :root {
@@ -153,4 +152,9 @@ code {
 
 .prose pre {
   background-color: var(--secondary);
+}
+
+[data-sonner-toast] {
+  font-family: var(--font-sans);
+  color: var(--muted-foreground);
 }

@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Suspense } from "react";
 import { Header } from "@/components/Header";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
+import { ToastProvider } from "@/context/toast";
 
 export const metadata: Metadata = {
   title: "Litewiki",
@@ -23,8 +26,13 @@ export default function RootLayout({
       >
         <body className="flex flex-col">
           <Header />
-          <main>{children}</main>
+          <main>
+            <Suspense fallback={null}>
+              <ToastProvider>{children}</ToastProvider>
+            </Suspense>
+          </main>
           <footer></footer>
+          <Toaster position="top-center" className="font-sans" />
         </body>
       </ThemeProvider>
     </html>
