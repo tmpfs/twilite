@@ -10,7 +10,7 @@ export function Header() {
     <header className="flex items-center justify-between bg-card px-4 py-2 text-sm">
       <div>
         <Button asChild variant="link" className="p-0 h-auto">
-          <Link href="/">Home</Link>
+          <Link href="/wiki">Wiki</Link>
         </Button>
       </div>
       <div className="space-x-4">

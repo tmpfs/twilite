@@ -85,6 +85,7 @@ impl Server {
                     .put(routes::api_update_page)
                     .delete(routes::api_delete_page),
             )
+            .route("/api/page/recents", get(routes::api_recent_pages))
             .route("/api/github/callback", get(github::callback))
             .route("/", get(routes::home));
 

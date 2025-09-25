@@ -4,6 +4,8 @@ import NoSsr from "@/components/NoSsr";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
+import type { Page } from "@/lib/model";
+import { formatUtcDateTime } from "@/lib/helpers";
 
 export default function WikiRouter() {
   const pathname = usePathname();
@@ -28,7 +30,7 @@ function WikiIndex() {
 }
 
 function WikiPage({ pageName }: { pageName: string }) {
-  const [data, setData] = useState<string>("");
+  const [page, setPage] = useState<Page | undefined>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -37,7 +39,7 @@ function WikiPage({ pageName }: { pageName: string }) {
     const fetchData = async () => {
       try {
         const res = await fetch(`/api/page/${pageName}`, {
-          headers: { Accept: "text/html" },
+          headers: { Accept: "application/json" },
         });
         if (!res.ok) {
           if (res.status === 404) {
@@ -48,8 +50,8 @@ function WikiPage({ pageName }: { pageName: string }) {
             );
           }
         }
-        const content = await res.text();
-        setData(content);
+        const page = await res.json();
+        setPage(page);
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -78,8 +80,12 @@ function WikiPage({ pageName }: { pageName: string }) {
       <Separator />
       <article
         className="prose py-4"
-        dangerouslySetInnerHTML={{ __html: data }}
+        dangerouslySetInnerHTML={{ __html: page?.pageContent || "" }}
       />
+      <Separator />
+      <div className="flex text-muted mt-2">
+        {page && <small>{formatUtcDateTime(page?.updatedAt || "")}</small>}
+      </div>
     </div>
   );
 }

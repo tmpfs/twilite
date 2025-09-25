@@ -15,6 +15,10 @@ pub enum ServerError {
     NoGeneratedOauthUrl,
     #[error("failed to generate oauth url")]
     GenerateOauthUrl,
+    #[error("not found")]
+    NotFound,
+    #[error("conflict")]
+    Conflict,
     #[error(transparent)]
     Time(#[from] time::error::Format),
     #[error(transparent)]
@@ -24,8 +28,11 @@ pub enum ServerError {
 // Implement `IntoResponse` for the error
 impl IntoResponse for ServerError {
     fn into_response(self) -> Response {
-        tracing::error!(error = ?self);
-        (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error").into_response()
+        match self {
+            Self::NotFound => (StatusCode::NOT_FOUND, "Not Found").into_response(),
+            Self::Conflict => (StatusCode::CONFLICT, "Conflict").into_response(),
+            _ => (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error").into_response(),
+        }
     }
 }
 
