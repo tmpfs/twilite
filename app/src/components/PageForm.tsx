@@ -32,9 +32,11 @@ export function PageForm({
   onSuccess,
   page,
   edit,
+  onDelete,
 }: {
   page: Page;
   edit?: boolean;
+  onDelete?: () => void;
   onSuccess: (pageName: string) => void;
 }) {
   const [status, setStatus] = useState<
@@ -52,7 +54,8 @@ export function PageForm({
     setStatus("loading");
     const formData = toFormData(values);
     try {
-      const res = await fetch("/api/page", {
+      const url = edit ? `/api/page/${page.pageUuid}` : "/api/page";
+      const res = await fetch(url, {
         method: edit ? "PUT" : "POST",
         body: formData,
       });
@@ -68,6 +71,25 @@ export function PageForm({
       setStatus("error");
     }
   }
+
+  const deletePage = async (e: any) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`/api/page/${page.pageUuid}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) throw new Error("Network error");
+
+      console.log(res);
+
+      setStatus("success");
+      if (onDelete) onDelete();
+    } catch (err) {
+      console.error(err);
+      setStatus("error");
+    }
+  };
 
   return (
     <Form {...form}>
@@ -100,7 +122,11 @@ export function PageForm({
           )}
         />
         <div className={`flex ${edit ? "justify-between" : "justify-end"}`}>
-          {edit && <Button variant="destructive">Delete</Button>}
+          {edit && (
+            <Button variant="destructive" onClick={deletePage}>
+              Delete
+            </Button>
+          )}
           <Button type="submit">Save</Button>
         </div>
       </form>

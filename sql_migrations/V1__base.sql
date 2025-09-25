@@ -10,9 +10,9 @@ CREATE TABLE IF NOT EXISTS topics
 CREATE TABLE IF NOT EXISTS pages
 (
     page_id               INTEGER             PRIMARY KEY NOT NULL,
-    topic_id              INTEGER             NULL,
     created_at            DATETIME            NOT NULL,
     updated_at            DATETIME            NOT NULL,
-    page_name             TEXT                NOT NULL,
+    page_uuid             TEXT                UNIQUE NOT NULL,
+    page_name             TEXT                UNIQUE NOT NULL,
     page_content          TEXT                NULL
 );

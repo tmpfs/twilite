@@ -1,4 +1,5 @@
 export type Page = {
-    pageName: string,
-    pageContent: string,
-}
+  pageUuid?: string;
+  pageName: string;
+  pageContent: string;
+};

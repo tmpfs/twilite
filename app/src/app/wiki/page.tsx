@@ -36,9 +36,17 @@ function WikiPage({ pageName }: { pageName: string }) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch(`/api/page/${pageName}`);
+        const res = await fetch(`/api/page/${pageName}`, {
+          headers: { Accept: "text/html" },
+        });
         if (!res.ok) {
-          throw new Error(`HTTP request failed with status code ${res.status}`);
+          if (res.status === 404) {
+            return router.push(`/new/${pageName}`);
+          } else {
+            throw new Error(
+              `HTTP request failed with status code ${res.status}`,
+            );
+          }
         }
         const content = await res.text();
         setData(content);

@@ -5,9 +5,10 @@ import { NotFound } from "@/components/NotFound";
 import NoSsr from "@/components/NoSsr";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import type { Page } from "@/lib/model";
 
 export default function EditPage() {
-  const [data, setData] = useState<string>("");
+  const [data, setData] = useState<Page | undefined>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,12 +20,14 @@ export default function EditPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch(`/api/page/${pageName}`);
+        const res = await fetch(`/api/page/${pageName}`, {
+          headers: { Accept: "application/json" },
+        });
         if (!res.ok) {
           throw new Error(`HTTP request failed with status code ${res.status}`);
         }
-        const content = await res.text();
-        setData(content);
+        const data = await res.json();
+        setData(data);
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -39,15 +42,21 @@ export default function EditPage() {
     return <NotFound />;
   }
 
+  const onDelete = () => {
+    router.push("/");
+  };
+
   if (loading) return <p>Loading...</p>;
   if (error) return <p>Error: {error}</p>;
 
-  const page = { pageName, pageContent: data };
+  console.log(data);
+
   return (
     <NoSsr>
       <PageForm
-        page={page}
+        page={data as Page}
         edit
+        onDelete={onDelete}
         onSuccess={(pageName) => router.push(`/wiki/${pageName}`)}
       />
     </NoSsr>

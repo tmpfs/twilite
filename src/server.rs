@@ -78,8 +78,13 @@ impl Server {
 
         let mut app = Router::new()
             .route("/login/github", get(github::login))
-            .route("/api/page/{page_name}", get(routes::api_select_page))
             .route("/api/page", post(routes::api_insert_page))
+            .route(
+                "/api/page/{page_name}",
+                get(routes::api_select_page_content)
+                    .put(routes::api_update_page)
+                    .delete(routes::api_delete_page),
+            )
             .route("/api/github/callback", get(github::callback))
             .route("/", get(routes::home));
 
@@ -88,6 +93,22 @@ impl Server {
             tower::{ServiceBuilder, ServiceExt},
             tower_http::services::ServeFile,
         };
+
+        cfg_if::cfg_if!(
+            if #[cfg(debug_assertions)] {
+                async fn asset_new_index() -> impl axum::response::IntoResponse {
+                    let service = ServiceBuilder::new()
+                        .layer(middleware::from_fn(set_static_cache_control))
+                        .service(ServeFile::new("./app/out/new/index.html"));
+
+                    let req = Request::builder().body(Body::empty()).unwrap();
+                    service.oneshot(req).await.unwrap()
+                }
+                app = app.route("/new/{*wildcard}", get(asset_new_index))
+            } else {
+                app = app.route("/new/{*wildcard}", get(routes::asset_new_index));
+            }
+        );
 
         cfg_if::cfg_if!(
             if #[cfg(debug_assertions)] {
