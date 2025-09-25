@@ -1,12 +1,3 @@
-CREATE TABLE IF NOT EXISTS topics
-(
-    topic_id              INTEGER             PRIMARY KEY NOT NULL,
-    created_at            DATETIME            NOT NULL,
-    updated_at            DATETIME            NOT NULL,
-    topic_name            TEXT                NOT NULL,
-    topic_description     TEXT                NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS pages
 (
     page_id               INTEGER             PRIMARY KEY NOT NULL,
@@ -14,5 +5,6 @@ CREATE TABLE IF NOT EXISTS pages
     updated_at            DATETIME            NOT NULL,
     page_uuid             TEXT                UNIQUE NOT NULL,
     page_name             TEXT                UNIQUE NOT NULL,
-    page_content          TEXT                NULL
+    page_content          TEXT                NULL,
+    page_text             TEXT                NULL
 );

@@ -1,4 +1,8 @@
-use crate::{error::ServerError, helpers::sanitize_html, server::ServerState};
+use crate::{
+    error::ServerError,
+    helpers::{html_to_text, sanitize_html},
+    server::ServerState,
+};
 use axum::{
     Extension, Json,
     extract::{Multipart, Path},
@@ -143,14 +147,17 @@ pub async fn api_insert_page(
     };
 
     let query = sql::Insert::new()
-        .insert_into("pages (created_at, updated_at, page_uuid, page_name, page_content)")
-        .values("(?1, ?2, ?3, ?4, ?5)");
+        .insert_into(
+            "pages (created_at, updated_at, page_uuid, page_name, page_content, page_text)",
+        )
+        .values("(?1, ?2, ?3, ?4, ?5, ?6)");
 
     let now = UtcDateTime::now();
     let created_at = now.format(&Rfc3339)?;
     let updated_at = now.format(&Rfc3339)?;
     let page_uuid = Uuid::new_v4();
     let page_content = sanitize_html(&page_content);
+    let page_text = html_to_text(&page_content);
     let client = state.client.lock().await;
     match client
         .conn(move |conn| {
@@ -161,6 +168,7 @@ pub async fn api_insert_page(
                 page_uuid.to_string(),
                 page_name,
                 page_content,
+                page_text,
             ))?;
             Ok(())
         })

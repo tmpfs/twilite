@@ -9,3 +9,10 @@ pub fn sanitize_html(dirty_html: &str) -> String {
     builder.link_rel(Some("noopener noreferrer"));
     builder.clean(dirty_html).to_string()
 }
+
+pub fn html_to_text(html_input: &str) -> String {
+    use scraper::Html;
+    let fragment = Html::parse_fragment(html_input);
+    let root_element = fragment.root_element();
+    root_element.text().collect::<Vec<_>>().join(" ")
+}
