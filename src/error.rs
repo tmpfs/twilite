@@ -30,6 +30,7 @@ pub enum ServerError {
 // Implement `IntoResponse` for the error
 impl IntoResponse for ServerError {
     fn into_response(self) -> Response {
+        tracing::error!(error = ?self);
         match self {
             Self::NotFound => (StatusCode::NOT_FOUND, "Not Found").into_response(),
             Self::Conflict => (StatusCode::CONFLICT, "Conflict").into_response(),

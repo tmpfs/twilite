@@ -3,9 +3,13 @@ use crate::{
     helpers::{html_to_text, sanitize_html},
 };
 use async_sqlite::{Client, Error::Rusqlite, rusqlite};
+use axum::body::Bytes;
 use sql_query_builder as sql;
 use time::{UtcDateTime, format_description::well_known::Rfc3339};
 use uuid::Uuid;
+
+/// Upload for a page.
+pub struct PageUpload(pub String, pub String, pub Bytes);
 
 pub struct PageEntity {
     pub page_id: i32,
@@ -22,6 +26,7 @@ impl PageEntity {
         client: &Client,
         page_name: String,
         page_content: String,
+        uploads: Vec<PageUpload>,
     ) -> Result<(), ServerError> {
         let query = sql::Insert::new()
             .insert_into(
@@ -36,16 +41,45 @@ impl PageEntity {
         let page_content = sanitize_html(&page_content);
         let page_text = html_to_text(&page_content);
         match client
-            .conn(move |conn| {
-                let mut stmt = conn.prepare_cached(&query.as_string())?;
-                stmt.execute((
-                    created_at,
-                    updated_at,
-                    page_uuid.to_string(),
-                    page_name,
-                    page_content,
-                    page_text,
-                ))?;
+            .conn_mut(move |conn| {
+                let tx = conn.transaction()?;
+                tx.execute(
+                    &query.as_string(),
+                    (
+                        created_at.clone(),
+                        updated_at.clone(),
+                        page_uuid.to_string(),
+                        page_name,
+                        page_content,
+                        page_text,
+                    ),
+                )?;
+
+                let page_id = tx.last_insert_rowid();
+
+                for upload in uploads {
+                    let file_uuid = Uuid::new_v4();
+
+                    let query = sql::Insert::new()
+                        .insert_into(
+                            "files (created_at, updated_at, file_uuid, file_name, content_type, file_content)",
+                        )
+                        .values("(?1, ?2, ?3, ?4, ?5, ?6)");
+
+                    tx.execute(
+                        &query.as_string(),
+                        (
+                            created_at.clone(),
+                            updated_at.clone(),
+                            file_uuid.to_string(),
+                            upload.0,
+                            upload.1,
+                            upload.2.to_vec(),
+                        ),
+                    )?;
+                }
+
+                tx.commit()?;
                 Ok(())
             })
             .await

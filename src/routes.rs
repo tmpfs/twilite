@@ -1,5 +1,5 @@
 use crate::{
-    entity::page::{PageEntity, PageResponse},
+    entity::page::{PageEntity, PageResponse, PageUpload},
     error::ServerError,
     server::ServerState,
 };
@@ -113,7 +113,6 @@ pub async fn api_insert_page(
     let mut uploads: Vec<(Option<String>, Option<String>, Bytes)> = vec![];
 
     while let Some(field) = multipart.next_field().await.unwrap() {
-        println!("{}", field.name().unwrap());
         match field.name().unwrap() {
             "pageName" => page_name = Some(field.text().await.unwrap()),
             "pageContent" => page_content = Some(field.text().await.unwrap()),
@@ -132,13 +131,14 @@ pub async fn api_insert_page(
         return Ok(StatusCode::BAD_REQUEST.into_response());
     };
 
-    println!(
-        "Server got files: {:#?}",
-        uploads.iter().map(|u| &u.0).collect::<Vec<_>>()
-    );
+    let uploads = uploads
+        .into_iter()
+        .filter(|u| u.0.is_some() && u.1.is_some())
+        .map(|u| PageUpload(u.0.unwrap(), u.1.unwrap(), u.2))
+        .collect::<Vec<_>>();
 
     let client = state.client.lock().await;
-    match PageEntity::add(&client, page_name, page_content).await {
+    match PageEntity::add(&client, page_name, page_content, uploads).await {
         Ok(_) => Ok(StatusCode::OK.into_response()),
         Err(e) => Err(e),
     }
