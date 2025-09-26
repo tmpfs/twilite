@@ -1,5 +1,8 @@
 use crate::{
-    entity::page::{PageEntity, PagePreview, PageResponse, PageSelectOptions, PageUpload},
+    entity::{
+        page::{PageEntity, PagePreview, PageResponse, PageSelectOptions, PageUpload},
+        search::{SearchEntity, SearchQuery, SearchRecord},
+    },
     error::ServerError,
     server::ServerState,
 };
@@ -19,6 +22,19 @@ use uuid::Uuid;
 #[derive(RustEmbed)]
 #[folder = "app/out"]
 struct Assets;
+
+pub async fn api_search(
+    Extension(state): Extension<Arc<ServerState>>,
+    Query(search_query): Query<SearchQuery>,
+) -> Result<Response, ServerError> {
+    let client = state.client.lock().await;
+    let results = SearchEntity::fts_search(&client, search_query).await?;
+    let results = results
+        .into_iter()
+        .map(SearchRecord::from)
+        .collect::<Vec<_>>();
+    Ok(Json(results).into_response())
+}
 
 pub async fn api_delete_page(
     Extension(state): Extension<Arc<ServerState>>,

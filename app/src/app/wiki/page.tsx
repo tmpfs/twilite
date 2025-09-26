@@ -105,7 +105,7 @@ function WikiPage({ pageName }: { pageName: string }) {
     };
 
     fetchData();
-  }, ["pageName"]);
+  }, [pageName]);
 
   if (loading) return <p>Loading...</p>;
   if (error) return <p>Error: {error}</p>;

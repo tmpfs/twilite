@@ -39,7 +39,7 @@ export default function EditPage() {
     };
 
     fetchData();
-  }, ["pageName"]);
+  }, [pageName]);
 
   const onDelete = () => {
     toast(`Wiki page ${page?.pageName} deleted`, { duration: 15000 });

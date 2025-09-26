@@ -11,3 +11,9 @@ export type PagePreview = {
   previewText: string;
   updatedAt: string;
 };
+
+export type SearchResult = {
+  rowId: number;
+  title: string;
+  body: string;
+};

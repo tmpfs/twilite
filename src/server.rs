@@ -78,6 +78,7 @@ impl Server {
 
         let mut app = Router::new()
             .route("/login/github", get(github::login))
+            .route("/api/search", get(routes::api_search))
             .route("/api/page", post(routes::api_insert_page))
             .route(
                 "/api/page/{page_name}",
