@@ -1,7 +1,7 @@
 use crate::{
     entity::file::{FileEntity, FileResponse},
     error::ServerError,
-    helpers::{html_to_text, rewrite_wiki_links, sanitize_html},
+    helpers::{html_to_text, rewrite_wiki_links, sanitize_html, trim_preview_text},
 };
 use async_sqlite::{Client, Error::Rusqlite, rusqlite};
 use axum::body::Bytes;
@@ -21,6 +21,55 @@ pub struct PageEntity {
     pub page_content: String,
     pub page_text: String,
     pub page_files: Vec<FileEntity>,
+}
+
+#[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PageResponse {
+    page_uuid: Uuid,
+    page_name: String,
+    page_content: String,
+    updated_at: String,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    page_files: Vec<FileResponse>,
+}
+
+impl From<PageEntity> for PageResponse {
+    fn from(value: PageEntity) -> Self {
+        Self {
+            page_uuid: value.page_uuid,
+            page_name: value.page_name,
+            page_content: value.page_content,
+            updated_at: value.updated_at,
+            page_files: value
+                .page_files
+                .into_iter()
+                .map(FileResponse::from)
+                .collect(),
+        }
+    }
+}
+
+#[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PagePreview {
+    page_uuid: Uuid,
+    page_name: String,
+    updated_at: String,
+    preview_text: String,
+    // #[serde(skip_serializing_if = "Vec::is_empty")]
+    // page_files: Vec<FileResponse>,
+}
+
+impl From<PageEntity> for PagePreview {
+    fn from(value: PageEntity) -> Self {
+        Self {
+            page_uuid: value.page_uuid,
+            page_name: value.page_name,
+            updated_at: value.updated_at,
+            preview_text: trim_preview_text(&value.page_text).into_owned(),
+        }
+    }
 }
 
 #[derive(Debug, Default, serde::Deserialize)]
@@ -199,31 +248,36 @@ impl PageEntity {
             Err(e) => Err(e.into()),
         }
     }
-}
 
-#[derive(Debug, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PageResponse {
-    page_uuid: Uuid,
-    page_name: String,
-    page_content: String,
-    updated_at: String,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    page_files: Vec<FileResponse>,
-}
-
-impl From<PageEntity> for PageResponse {
-    fn from(value: PageEntity) -> Self {
-        Self {
-            page_uuid: value.page_uuid,
-            page_name: value.page_name,
-            page_content: value.page_content,
-            updated_at: value.updated_at,
-            page_files: value
-                .page_files
-                .into_iter()
-                .map(FileResponse::from)
-                .collect(),
-        }
+    pub async fn find_recent(client: &Client) -> Result<Vec<Self>, ServerError> {
+        let sql = sql::Select::new()
+            .select("pages.*")
+            .from("pages")
+            .order_by("updated_at DESC LIMIT 10");
+        // .where_clause("pf.page_id = ?");
+        let pages = client
+            .conn(move |conn| {
+                let mut stmt = conn.prepare_cached(&sql.as_string())?;
+                let mut rows = stmt.query([])?;
+                let mut pages = Vec::new();
+                while let Some(row) = rows.next()? {
+                    let page_uuid = row.get::<_, String>("page_uuid")?;
+                    let page_uuid = page_uuid.parse().unwrap();
+                    let page_entity = PageEntity {
+                        page_id: row.get("page_id")?,
+                        created_at: row.get("created_at")?,
+                        updated_at: row.get("updated_at")?,
+                        page_uuid,
+                        page_name: row.get("page_name")?,
+                        page_content: row.get("page_content")?,
+                        page_text: row.get("page_text")?,
+                        page_files: Vec::new(),
+                    };
+                    pages.push(page_entity);
+                }
+                Ok(pages)
+            })
+            .await?;
+        Ok(pages)
     }
 }

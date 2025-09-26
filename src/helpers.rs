@@ -1,11 +1,14 @@
 use crate::error::ServerError;
 use kuchiki::{parse_html, traits::*};
 use regex::Regex;
-use std::default::Default;
+use std::borrow::Cow;
 use std::sync::LazyLock;
 
 static WIKI_WORD_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"([A-Z][a-z0-9]+(?:[A-Z][a-z0-9]*)+)").unwrap());
+
+const PREVIEW_LENGTH: usize = 256;
+const ELLIPSIS: &str = "...";
 
 pub fn sanitize_html(dirty_html: &str) -> String {
     use ammonia::Builder;
@@ -24,6 +27,22 @@ pub fn html_to_text(html_input: &str) -> String {
     let fragment = Html::parse_fragment(html_input);
     let root_element = fragment.root_element();
     root_element.text().collect::<Vec<_>>().join(" ")
+}
+
+pub fn trim_preview_text<'a>(input: &'a str) -> Cow<'a, str> {
+    if input.len() < PREVIEW_LENGTH {
+        return Cow::Borrowed(input);
+    } else {
+        let mut preview = format!("{}", &input[..PREVIEW_LENGTH]);
+        if !preview.ends_with('.') {
+            preview = format!(
+                "{}{}",
+                &preview[..PREVIEW_LENGTH - ELLIPSIS.len()],
+                ELLIPSIS
+            );
+        }
+        Cow::Owned(preview)
+    }
 }
 
 pub fn rewrite_wiki_links(input: &str) -> Result<String, ServerError> {

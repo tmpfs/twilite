@@ -36,3 +36,27 @@ CREATE TABLE IF NOT EXISTS page_files
     page_id           INTEGER             NOT NULL,
     file_id           INTEGER             NOT NULL
 );
+
+CREATE VIRTUAL TABLE pages_fts USING fts5(
+    page_name, 
+    page_text, 
+    content='pages', 
+    content_rowid='page_id',
+    tokenize = 'trigram'
+);
+CREATE TRIGGER pages_ai AFTER INSERT ON pages BEGIN
+  INSERT INTO pages_fts(rowid, page_name, page_text)
+  VALUES (new.page_id, new.page_name, new.page_text);
+END;
+CREATE TRIGGER pages_ad AFTER DELETE ON pages BEGIN
+  INSERT INTO pages_fts(pages_fts, rowid, page_name, page_text)
+  VALUES('delete', old.page_id, old.page_name, old.page_text);
+END;
+CREATE TRIGGER pages_au AFTER UPDATE ON pages BEGIN
+  -- First delete old entry
+  INSERT INTO pages_fts(pages_fts, rowid, page_name, page_text)
+  VALUES('delete', old.page_id, old.page_name, old.page_text);
+  -- Then insert updated entry
+  INSERT INTO pages_fts(rowid, page_name, page_text)
+  VALUES (new.page_id, new.page_name, new.page_text);
+END;

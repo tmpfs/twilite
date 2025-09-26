@@ -1,5 +1,5 @@
 use crate::{
-    entity::page::{PageEntity, PageResponse, PageSelectOptions, PageUpload},
+    entity::page::{PageEntity, PagePreview, PageResponse, PageSelectOptions, PageUpload},
     error::ServerError,
     server::ServerState,
 };
@@ -52,8 +52,6 @@ pub async fn api_select_page_content(
     if let Some(accept) = headers.get("accept") {
         if accept == "application/json" {
             api_select_page_json(state, page_name, options.0.unwrap_or_default()).await
-        } else if accept == "text/html" {
-            api_select_page_html(state, page_name, options.0.unwrap_or_default()).await
         } else {
             Ok((StatusCode::UNSUPPORTED_MEDIA_TYPE, "Unsupported media type").into_response())
         }
@@ -66,18 +64,13 @@ pub async fn api_recent_pages(
     Extension(state): Extension<Arc<ServerState>>,
     headers: HeaderMap,
 ) -> Result<Response, ServerError> {
-    if let Some(accept) = headers.get("accept") {
-        if accept == "application/json" {
-            // api_select_page_json(state, page_name).await
-            todo!();
-        } else if accept == "text/html" {
-            // api_select_page_html(state, page_name).await
-            todo!();
-        } else {
-            Ok((StatusCode::UNSUPPORTED_MEDIA_TYPE, "Unsupported media type").into_response())
+    let client = state.client.lock().await;
+    match PageEntity::find_recent(&client).await {
+        Ok(entities) => {
+            let response: Vec<PagePreview> = entities.into_iter().map(PagePreview::from).collect();
+            Ok(Json(response).into_response())
         }
-    } else {
-        Ok((StatusCode::NOT_ACCEPTABLE, "Unsupported Accept header").into_response())
+        Err(e) => Err(e),
     }
 }
 
@@ -92,18 +85,6 @@ async fn api_select_page_json(
             let response: PageResponse = entity.into();
             Ok(Json(response).into_response())
         }
-        Err(e) => Err(e),
-    }
-}
-
-async fn api_select_page_html(
-    state: Arc<ServerState>,
-    page_name: String,
-    options: PageSelectOptions,
-) -> Result<Response, ServerError> {
-    let client = state.client.lock().await;
-    match PageEntity::find_by_name(&client, page_name, options).await {
-        Ok(entity) => Ok(Html(entity.page_content).into_response()),
         Err(e) => Err(e),
     }
 }

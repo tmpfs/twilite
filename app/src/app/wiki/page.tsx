@@ -4,8 +4,9 @@ import NoSsr from "@/components/NoSsr";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
-import type { Page } from "@/lib/model";
+import type { Page, PagePreview } from "@/lib/model";
 import { formatUtcDateTime } from "@/lib/helpers";
+import Link from "next/link";
 
 export default function WikiRouter() {
   const pathname = usePathname();
@@ -22,9 +23,52 @@ export default function WikiRouter() {
 }
 
 function WikiIndex() {
+  const [pages, setPages] = useState<PagePreview[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | undefined>();
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await fetch(`/api/page/recent`, {
+          headers: { Accept: "application/json" },
+        });
+        if (!res.ok) {
+          throw new Error(`HTTP request failed with status code ${res.status}`);
+        }
+        const pages = await res.json();
+        console.log(pages);
+        setPages(pages);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  if (loading) return <p>Loading...</p>;
+  if (error) return <p>Error: {error}</p>;
+
   return (
-    <div>
-      <h1>Wiki index</h1>
+    <div className="flex flex-col w-full p-4 space-y-2">
+      <h3>Recent pages</h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6 w-full">
+        {pages.map((page) => {
+          return (
+            <Link
+              href={`/wiki/${page.pageName}`}
+              key={page.pageName}
+              className="no-underline rounded-lg border border-muted shadow p-4 flex flex-col h-256px overflow-hidden"
+            >
+              <div className="text-muted-foreground">{page.pageName}</div>
+              <div className="truncate">{page.previewText}</div>
+            </Link>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -32,7 +76,7 @@ function WikiIndex() {
 function WikiPage({ pageName }: { pageName: string }) {
   const [page, setPage] = useState<Page | undefined>();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | undefined>();
   const router = useRouter();
 
   useEffect(() => {
@@ -84,7 +128,7 @@ function WikiPage({ pageName }: { pageName: string }) {
         dangerouslySetInnerHTML={{ __html: page?.pageContent || "" }}
       />
       <Separator />
-      <div className="flex text-muted mt-2">
+      <div className="flex text-muted-foreground mt-2">
         {page && <small>{formatUtcDateTime(page?.updatedAt || "")}</small>}
       </div>
     </div>
