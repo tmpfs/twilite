@@ -21,13 +21,12 @@ pub fn sanitize_html(dirty_html: &str) -> String {
 }
 
 pub fn html_to_text(html_input: &str) -> String {
-    use scraper::Html;
-    let fragment = Html::parse_fragment(html_input);
-    let root_element = fragment.root_element();
-    root_element.text().collect::<Vec<_>>().join(" ")
+    use kuchiki::traits::*;
+    let fragment = kuchiki::parse_html().one(html_input);
+    fragment.text_contents()
 }
 
-pub fn trim_preview_text<'a>(input: &'a str) -> &str {
+pub fn trim_preview_text(input: &str) -> &str {
     if input.len() < PREVIEW_LENGTH {
         input
     } else {
