@@ -1,6 +1,7 @@
 use crate::{
+    entity::file::{FileEntity, FileResponse},
     error::ServerError,
-    helpers::{html_to_text, sanitize_html},
+    helpers::{html_to_text, rewrite_wiki_links, sanitize_html},
 };
 use async_sqlite::{Client, Error::Rusqlite, rusqlite};
 use axum::body::Bytes;
@@ -19,6 +20,12 @@ pub struct PageEntity {
     pub page_name: String,
     pub page_content: String,
     pub page_text: String,
+    pub page_files: Vec<FileEntity>,
+}
+
+#[derive(Debug, Default, serde::Deserialize)]
+pub struct PageSelectOptions {
+    pub include_files: bool,
 }
 
 impl PageEntity {
@@ -39,6 +46,7 @@ impl PageEntity {
         let updated_at = now.format(&Rfc3339)?;
         let page_uuid = Uuid::new_v4();
         let page_content = sanitize_html(&page_content);
+        let page_content = rewrite_wiki_links(&page_content)?;
         let page_text = html_to_text(&page_content);
         match client
             .conn_mut(move |conn| {
@@ -61,9 +69,9 @@ impl PageEntity {
 
                     let query = sql::Insert::new()
                         .insert_into(
-                            "files (created_at, updated_at, file_uuid, file_name, content_type, file_content)",
+                            "files (created_at, updated_at, file_uuid, file_name, file_size, content_type, file_content)",
                         )
-                        .values("(?1, ?2, ?3, ?4, ?5, ?6)");
+                        .values("(?1, ?2, ?3, ?4, ?5, ?6, ?7)");
 
                     tx.execute(
                         &query.as_string(),
@@ -72,6 +80,7 @@ impl PageEntity {
                             updated_at.clone(),
                             file_uuid.to_string(),
                             upload.0,
+                            upload.2.len(),
                             upload.1,
                             upload.2.to_vec(),
                         ),
@@ -119,16 +128,24 @@ impl PageEntity {
     ) -> Result<(), ServerError> {
         let query = sql::Update::new()
             .update("pages")
-            .set("updated_at = ?1, page_name = ?2, page_content = ?3")
-            .where_clause("page_uuid = ?4");
+            .set("updated_at = ?1, page_name = ?2, page_content = ?3, page_text = ?4")
+            .where_clause("page_uuid = ?5");
 
         let now = UtcDateTime::now();
         let updated_at = now.format(&Rfc3339)?;
         let page_content = sanitize_html(&page_content);
+        let page_content = rewrite_wiki_links(&page_content)?;
+        let page_text = html_to_text(&page_content);
         client
             .conn(move |conn| {
                 let mut stmt = conn.prepare_cached(&query.as_string())?;
-                stmt.execute((updated_at, page_name, page_content, page_uuid.to_string()))?;
+                stmt.execute((
+                    updated_at,
+                    page_name,
+                    page_content,
+                    page_text,
+                    page_uuid.to_string(),
+                ))?;
                 Ok(())
             })
             .await?;
@@ -136,7 +153,11 @@ impl PageEntity {
         Ok(())
     }
 
-    pub async fn find_by_name(client: &Client, page_name: String) -> Result<Self, ServerError> {
+    pub async fn find_by_name(
+        client: &Client,
+        page_name: String,
+        options: PageSelectOptions,
+    ) -> Result<Self, ServerError> {
         let query = sql::Select::new()
             .select(
                 "page_id, created_at, updated_at, page_uuid, page_name, page_content, page_text",
@@ -158,13 +179,22 @@ impl PageEntity {
                         page_name: row.get("page_name")?,
                         page_content: row.get("page_content")?,
                         page_text: row.get("page_text")?,
+                        page_files: Vec::new(),
                     })
                 })
             })
             .await;
 
         match content {
-            Ok(entity) => Ok(entity),
+            Ok(mut entity) => {
+                if options.include_files {
+                    entity.page_files =
+                        FileEntity::find_all_by_page_id(client, entity.page_id).await?;
+                    Ok(entity)
+                } else {
+                    Ok(entity)
+                }
+            }
             Err(Rusqlite(rusqlite::Error::QueryReturnedNoRows)) => Err(ServerError::NotFound),
             Err(e) => Err(e.into()),
         }
@@ -178,6 +208,8 @@ pub struct PageResponse {
     page_name: String,
     page_content: String,
     updated_at: String,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    page_files: Vec<FileResponse>,
 }
 
 impl From<PageEntity> for PageResponse {
@@ -187,6 +219,11 @@ impl From<PageEntity> for PageResponse {
             page_name: value.page_name,
             page_content: value.page_content,
             updated_at: value.updated_at,
+            page_files: value
+                .page_files
+                .into_iter()
+                .map(FileResponse::from)
+                .collect(),
         }
     }
 }

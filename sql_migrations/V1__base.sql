@@ -20,9 +20,10 @@ CREATE TABLE IF NOT EXISTS files
     created_at            DATETIME            NOT NULL,
     updated_at            DATETIME            NOT NULL,
     file_uuid             TEXT                UNIQUE NOT NULL,
-    file_name             TEXT                UNIQUE NOT NULL,
-    content_type          TEXT                NULL,
-    file_content          TEXT                NULL
+    file_name             TEXT                NOT NULL,
+    file_size             INTEGER             NOT NULL,
+    content_type          TEXT                NOT NULL,
+    file_content          BLOB                NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS file_uuid

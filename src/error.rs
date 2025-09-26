@@ -3,6 +3,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use oauth_axum::error::OauthError;
+use std::string::FromUtf8Error;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -19,8 +20,12 @@ pub enum ServerError {
     NotFound,
     #[error("conflict")]
     Conflict,
-    #[error("multipart")]
-    Mulipart(#[from] axum::extract::multipart::MultipartError),
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+    #[error(transparent)]
+    Utf8(#[from] FromUtf8Error),
+    #[error(transparent)]
+    Multipart(#[from] axum::extract::multipart::MultipartError),
     #[error(transparent)]
     Time(#[from] time::error::Format),
     #[error(transparent)]

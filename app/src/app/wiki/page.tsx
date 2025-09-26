@@ -38,7 +38,7 @@ function WikiPage({ pageName }: { pageName: string }) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch(`/api/page/${pageName}`, {
+        const res = await fetch(`/api/page/${pageName}?include_files=true`, {
           headers: { Accept: "application/json" },
         });
         if (!res.ok) {
@@ -51,6 +51,7 @@ function WikiPage({ pageName }: { pageName: string }) {
           }
         }
         const page = await res.json();
+        console.log(page);
         setPage(page);
       } catch (err: any) {
         setError(err.message);

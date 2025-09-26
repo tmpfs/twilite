@@ -7,14 +7,17 @@ edition = "2024"
 ammonia = "4.1.2"
 anyhow = "1.0.100"
 async-sqlite = "0.5.3"
-axum = {version = "0.8.4", features = ["multipart"] }
+axum = {version = "0.8.4", features = ["multipart", "query"] }
+axum-extra = { version = "0.10.1", features = ["query"] }
 cfg-if = "1.0.3"
 clap = { version = "4.5.48", features = ["derive", "wrap_help"] }
 dotenv = "0.15.0"
+kuchiki = "0.8.1"
 mime_guess = "2.0.5"
 oauth-axum = "0.1.4"
 open = "5.3.2"
 refinery = { version = "0.8.16", features = ["rusqlite"] }
+regex = "1.11.3"
 rusqlite = "0.37.0"
 rust-embed = "8.7.2"
 scraper = "0.24.0"

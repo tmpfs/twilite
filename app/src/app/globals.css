@@ -154,6 +154,12 @@ code {
   background-color: var(--secondary);
 }
 
+.prose a,
+.prose a:hover,
+.prose a:visited {
+  color: var(--accent-foreground);
+}
+
 [data-sonner-toast] {
   font-family: var(--font-sans);
   color: var(--muted-foreground);
