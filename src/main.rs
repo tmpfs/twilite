@@ -4,9 +4,9 @@ use clap::Parser;
 use std::path::{Path, PathBuf};
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-use wikilite::{config::*, migrations, server::Server};
+use twilite::{config::*, migrations, server::Server};
 
-const DEFAULT_LOG_LEVEL: &str = "wikilite=info";
+const DEFAULT_LOG_LEVEL: &str = "twilite=info";
 
 /// Initialize the tracing subscriber.
 pub fn init_subscriber(logs_dir: &Path, name: &str, log_level: String) -> Result<()> {
@@ -82,7 +82,7 @@ async fn main() {
 
     let log_file_name = std::env::var("WIKILITE_LOG_FILE_NAME")
         .ok()
-        .unwrap_or("wikilite.log".to_owned());
+        .unwrap_or("twilite.log".to_owned());
 
     init_subscriber(
         &logs_dir,

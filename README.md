@@ -1,3 +1,7 @@
-# Wikilite
+# Twilite
 
-Lightweight wiki backed by SQLite.
+Tiny wiki backed by SQLite.
+
+## License
+
+AGPL-3.0

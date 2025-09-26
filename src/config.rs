@@ -3,7 +3,7 @@ use serde::Deserialize;
 use std::{net::SocketAddr, path::PathBuf};
 
 #[derive(Parser)]
-#[clap(name = "wikilite", author, version, about, long_about = None)]
+#[clap(name = "twilite", author, version, about, long_about = None)]
 pub struct WikiLiteCli {
     /// Configuration file.
     #[clap(short, long)]
@@ -39,7 +39,7 @@ pub struct Database {
 impl Default for Database {
     fn default() -> Self {
         Self {
-            path: String::from("data/wikilite.sqlite3"),
+            path: String::from("data/twilite.sqlite3"),
         }
     }
 }

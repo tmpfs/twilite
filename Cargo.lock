@@ -2804,6 +2804,42 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 
 [[package]]
+name = "twilite"
+version = "0.1.0"
+dependencies = [
+ "ammonia",
+ "anyhow",
+ "async-sqlite",
+ "axum",
+ "axum-extra",
+ "cfg-if",
+ "clap",
+ "dotenv",
+ "kuchiki",
+ "mime_guess",
+ "oauth-axum",
+ "open",
+ "refinery",
+ "regex",
+ "rusqlite",
+ "rust-embed",
+ "scraper",
+ "serde",
+ "sql_query_builder",
+ "thiserror 2.0.16",
+ "time",
+ "tokio",
+ "toml 0.9.7",
+ "tower",
+ "tower-http",
+ "tracing",
+ "tracing-appender",
+ "tracing-subscriber",
+ "uri",
+ "uuid",
+]
+
+[[package]]
 name = "typenum"
 version = "1.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3047,42 +3083,6 @@ name = "webpki-roots"
 version = "0.25.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5f20c57d8d7db6d3b86154206ae5d8fba62dd39573114de97c2cb0578251f8e1"
-
-[[package]]
-name = "wikilite"
-version = "0.1.0"
-dependencies = [
- "ammonia",
- "anyhow",
- "async-sqlite",
- "axum",
- "axum-extra",
- "cfg-if",
- "clap",
- "dotenv",
- "kuchiki",
- "mime_guess",
- "oauth-axum",
- "open",
- "refinery",
- "regex",
- "rusqlite",
- "rust-embed",
- "scraper",
- "serde",
- "sql_query_builder",
- "thiserror 2.0.16",
- "time",
- "tokio",
- "toml 0.9.7",
- "tower",
- "tower-http",
- "tracing",
- "tracing-appender",
- "tracing-subscriber",
- "uri",
- "uuid",
-]
 
 [[package]]
 name = "winapi-util"
