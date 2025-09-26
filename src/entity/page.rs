@@ -56,7 +56,6 @@ impl PageEntity {
                 )?;
 
                 let page_id = tx.last_insert_rowid();
-
                 for upload in uploads {
                     let file_uuid = Uuid::new_v4();
 
@@ -75,6 +74,20 @@ impl PageEntity {
                             upload.0,
                             upload.1,
                             upload.2.to_vec(),
+                        ),
+                    )?;
+
+                    let file_id = tx.last_insert_rowid();
+                    let query = sql::Insert::new()
+                        .insert_into(
+                            "page_files (page_id, file_id)",
+                        )
+                        .values("(?1, ?2)");
+                    tx.execute(
+                        &query.as_string(),
+                        (
+                            page_id,
+                            file_id,
                         ),
                     )?;
                 }

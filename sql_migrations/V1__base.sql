@@ -9,6 +9,11 @@ CREATE TABLE IF NOT EXISTS pages
     page_text             TEXT                NULL
 );
 
+CREATE INDEX IF NOT EXISTS page_uuid
+  ON pages (page_uuid);
+CREATE INDEX IF NOT EXISTS page_name 
+  ON pages (page_name);
+
 CREATE TABLE IF NOT EXISTS files
 (
     file_id               INTEGER             PRIMARY KEY NOT NULL,
@@ -18,4 +23,15 @@ CREATE TABLE IF NOT EXISTS files
     file_name             TEXT                UNIQUE NOT NULL,
     content_type          TEXT                NULL,
     file_content          TEXT                NULL
+);
+
+CREATE INDEX IF NOT EXISTS file_uuid
+  ON files (file_uuid);
+CREATE INDEX IF NOT EXISTS file_name
+  ON files (file_name);
+
+CREATE TABLE IF NOT EXISTS page_files
+(
+    page_id           INTEGER             NOT NULL,
+    file_id           INTEGER             NOT NULL
 );
