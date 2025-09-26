@@ -19,6 +19,8 @@ pub enum ServerError {
     NotFound,
     #[error("conflict")]
     Conflict,
+    #[error("multipart")]
+    Mulipart(#[from] axum::extract::multipart::MultipartError),
     #[error(transparent)]
     Time(#[from] time::error::Format),
     #[error(transparent)]

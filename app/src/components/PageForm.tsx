@@ -27,6 +27,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dropzone,
+  DropzoneContent,
+  DropzoneEmptyState,
+} from "@/components/ui/shadcn-io/dropzone";
 
 const formSchema = z.object({
   pageName: z.string().regex(/^[A-Z][a-zA-Z0-9]*$/, {
@@ -35,6 +40,7 @@ const formSchema = z.object({
   pageContent: z.string().refine((val) => val.trim().length > 0, {
     message: "Page content must not be empty or whitespace.",
   }),
+  files: z.array(z.string()),
 });
 
 export function PageForm({
@@ -53,17 +59,25 @@ export function PageForm({
   const [status, setStatus] = useState<
     "idle" | "loading" | "success" | "error"
   >("idle");
+  const [files, setFiles] = useState<File[]>([]);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       pageName: page.pageName,
       pageContent: page.pageContent,
+      files: [],
     },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setStatus("loading");
     const formData = toFormData(values);
+
+    files.forEach((file) => {
+      formData.append("uploads", file, file.name);
+    });
+
     try {
       const url = edit ? `/api/page/${page.pageUuid}` : "/api/page";
       const res = await fetch(url, {
@@ -107,6 +121,11 @@ export function PageForm({
     }
   };
 
+  const handleDrop = (files: File[]) => {
+    console.log(files);
+    setFiles(files);
+  };
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 m-4">
@@ -132,6 +151,29 @@ export function PageForm({
             <FormItem>
               <FormControl>
                 <MarkdownInput {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="files"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <Dropzone
+                  accept={{ "image/*": [] }}
+                  maxFiles={10}
+                  maxSize={1024 * 1024 * 10}
+                  minSize={1024}
+                  onDrop={handleDrop}
+                  onError={console.error}
+                  src={files}
+                >
+                  <DropzoneEmptyState />
+                  <DropzoneContent />
+                </Dropzone>
               </FormControl>
               <FormMessage />
             </FormItem>

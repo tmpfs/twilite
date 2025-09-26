@@ -5,6 +5,7 @@ use crate::{
 };
 use axum::{
     Extension, Json,
+    body::Bytes,
     extract::{Multipart, Path},
     http::{HeaderMap, StatusCode, Uri, header},
     response::{Html, IntoResponse, Redirect, Response},
@@ -109,14 +110,20 @@ pub async fn api_insert_page(
 ) -> Result<Response, ServerError> {
     let mut page_name = None;
     let mut page_content = None;
+    let mut uploads: Vec<(Option<String>, Option<String>, Bytes)> = vec![];
 
     while let Some(field) = multipart.next_field().await.unwrap() {
-        let name = field.name().unwrap().to_string();
-        let value = field.text().await.unwrap();
-
-        match name.as_str() {
-            "pageName" => page_name = Some(value),
-            "pageContent" => page_content = Some(value),
+        println!("{}", field.name().unwrap());
+        match field.name().unwrap() {
+            "pageName" => page_name = Some(field.text().await.unwrap()),
+            "pageContent" => page_content = Some(field.text().await.unwrap()),
+            "uploads" => {
+                uploads.push((
+                    field.file_name().map(|s| s.to_owned()),
+                    field.content_type().map(|s| s.to_owned()),
+                    field.bytes().await?,
+                ));
+            }
             _ => {}
         }
     }
@@ -124,6 +131,11 @@ pub async fn api_insert_page(
     let (Some(page_name), Some(page_content)) = (page_name, page_content) else {
         return Ok(StatusCode::BAD_REQUEST.into_response());
     };
+
+    println!(
+        "Server got files: {:#?}",
+        uploads.iter().map(|u| &u.0).collect::<Vec<_>>()
+    );
 
     let client = state.client.lock().await;
     match PageEntity::add(&client, page_name, page_content).await {
@@ -143,7 +155,6 @@ pub async fn api_update_page(
     while let Some(field) = multipart.next_field().await.unwrap() {
         let name = field.name().unwrap().to_string();
         let value = field.text().await.unwrap();
-
         match name.as_str() {
             "pageName" => page_name = Some(value),
             "pageContent" => page_content = Some(value),
