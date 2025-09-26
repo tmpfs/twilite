@@ -67,7 +67,7 @@ impl From<PageEntity> for PagePreview {
             page_uuid: value.page_uuid,
             page_name: value.page_name,
             updated_at: value.updated_at,
-            preview_text: trim_preview_text(&value.page_text).into_owned(),
+            preview_text: trim_preview_text(&value.page_text).to_owned(),
         }
     }
 }

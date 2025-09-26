@@ -3,6 +3,13 @@ name = "wikilite"
 version = "0.1.0"
 edition = "2024"
 
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = "symbols"
+panic = "abort"
+
 [dependencies]
 ammonia = "4.1.2"
 anyhow = "1.0.100"

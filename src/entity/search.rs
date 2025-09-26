@@ -1,4 +1,4 @@
-use crate::error::ServerError;
+use crate::{error::ServerError, helpers::trim_preview_text};
 use async_sqlite::Client;
 use sql_query_builder as sql;
 
@@ -21,7 +21,7 @@ impl From<SearchEntity> for SearchRecord {
         Self {
             row_id: value.row_id,
             title: value.title,
-            body: value.body,
+            body: trim_preview_text(&value.body).to_owned(),
         }
     }
 }
