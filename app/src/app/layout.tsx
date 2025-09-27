@@ -9,7 +9,7 @@ import { SearchProvider } from "@/context/search";
 import { SearchMenu } from "@/components/SearchMenu";
 
 export const metadata: Metadata = {
-  title: "Litewiki",
+  title: "Twilite",
   description: "Lightweight wiki",
 };
 
@@ -27,7 +27,10 @@ export default function RootLayout({
         disableTransitionOnChange
       >
         <SearchProvider>
-          <body className="flex flex-col text-base sm:text-lg md:text-xl lg:text-2xl">
+          <body
+            className="flex flex-col text-base sm:text-lg md:text-xl lg:text-2xl"
+            id="top"
+          >
             <Header />
             <main className="flex-1">
               <Suspense fallback={null}>

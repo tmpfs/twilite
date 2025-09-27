@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { useState } from "react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { FileWarning } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -32,6 +33,9 @@ import {
   DropzoneContent,
   DropzoneEmptyState,
 } from "@/components/ui/shadcn-io/dropzone";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import Link from "next/link";
+import { scrollToTop } from "@/lib/helpers";
 
 const formSchema = z.object({
   pageName: z.string().regex(/^[A-Z][a-zA-Z0-9]*$/, {
@@ -60,6 +64,7 @@ export function PageForm({
     "idle" | "loading" | "success" | "error"
   >("idle");
   const [files, setFiles] = useState<File[]>([]);
+  const [conflict, setConflict] = useState<string | undefined>();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -85,7 +90,14 @@ export function PageForm({
         body: formData,
       });
 
-      if (!res.ok) throw new Error("Network error");
+      if (!res.ok) {
+        if (res.status === 409) {
+          setConflict(values.pageName);
+          scrollToTop();
+          return;
+        }
+        throw new Error("Network error");
+      }
 
       console.log(res);
 
@@ -109,7 +121,9 @@ export function PageForm({
         method: "DELETE",
       });
 
-      if (!res.ok) throw new Error("Network error");
+      if (!res.ok) {
+        throw new Error("Network error");
+      }
 
       console.log(res);
 
@@ -127,93 +141,114 @@ export function PageForm({
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 m-4">
-        <FormField
-          control={form.control}
-          name="pageName"
-          render={({ field }) => (
-            <FormItem>
-              <FormControl>
-                <Input
-                  placeholder="Name of the wiki page, eg: MyWikiPage"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="pageContent"
-          render={({ field }) => (
-            <FormItem>
-              <FormControl>
-                <MarkdownInput {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="files"
-          render={({ field }) => (
-            <FormItem>
-              <FormControl>
-                <Dropzone
-                  accept={{ "image/*": [] }}
-                  maxFiles={10}
-                  maxSize={1024 * 1024 * 10}
-                  minSize={1024}
-                  onDrop={handleDrop}
-                  onError={console.error}
-                  src={files}
-                >
-                  <DropzoneEmptyState />
-                  <DropzoneContent />
-                </Dropzone>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <div className={`flex ${edit ? "justify-between" : "justify-end"}`}>
-          {edit && (
-            <AlertDialog>
-              <AlertDialogTrigger>
-                <Button type="button" variant="destructive">
-                  Delete
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete
-                    the wiki page.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={deletePage}>
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          )}
-          <div className="space-x-4">
-            {edit && (
-              <Button type="button" variant="secondary" onClick={cancel}>
-                Cancel
-              </Button>
+    <div className="flex flex-col space-y-8 m-4">
+      {conflict && <ConflictAlert pageName={conflict} />}
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <FormField
+            control={form.control}
+            name="pageName"
+            render={({ field }) => (
+              <FormItem>
+                <FormControl>
+                  <Input
+                    placeholder="Name of the wiki page, eg: MyWikiPage"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             )}
-            <Button type="submit">Save</Button>
+          />
+          <FormField
+            control={form.control}
+            name="pageContent"
+            render={({ field }) => (
+              <FormItem>
+                <FormControl>
+                  <MarkdownInput {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="files"
+            render={({ field }) => (
+              <FormItem>
+                <FormControl>
+                  <Dropzone
+                    accept={{ "image/*": [] }}
+                    maxFiles={10}
+                    maxSize={1024 * 1024 * 10}
+                    minSize={1024}
+                    onDrop={handleDrop}
+                    onError={console.error}
+                    src={files}
+                  >
+                    <DropzoneEmptyState />
+                    <DropzoneContent />
+                  </Dropzone>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <div className={`flex ${edit ? "justify-between" : "justify-end"}`}>
+            {edit && (
+              <AlertDialog>
+                <AlertDialogTrigger>
+                  <Button type="button" variant="destructive">
+                    Delete
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      Are you absolutely sure?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. This will permanently delete
+                      the wiki page.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={deletePage}>
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+            <div className="space-x-4">
+              {edit && (
+                <Button type="button" variant="secondary" onClick={cancel}>
+                  Cancel
+                </Button>
+              )}
+              <Button type="submit">Save</Button>
+            </div>
           </div>
-        </div>
-      </form>
-    </Form>
+        </form>
+      </Form>
+    </div>
+  );
+}
+
+function ConflictAlert({ pageName }: { pageName: string }) {
+  return (
+    <Alert variant="destructive">
+      <FileWarning />
+      <AlertTitle className="font-semibold">Page already exists!</AlertTitle>
+      <AlertDescription>
+        A wiki page called {pageName} already exists either choose another name
+        or edit the page.
+        <Link href={`/edit/${pageName}`} className="inline underline">
+          Edit {pageName} page
+        </Link>
+      </AlertDescription>
+    </Alert>
   );
 }

@@ -84,9 +84,11 @@ export default function EditPage() {
     router.push(`/wiki/${pageName}`);
   };
 
+  /*
   if (segments.length < 2) {
     return <NotFound />;
   }
+  */
 
   if (state.status === "loading") {
     return <LoadingScreen />;
