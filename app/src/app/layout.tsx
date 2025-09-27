@@ -11,6 +11,7 @@ import { SearchMenu } from "@/components/SearchMenu";
 export const metadata: Metadata = {
   title: "Twilite",
   description: "Lightweight wiki",
+  manifest: "/site.webmanifest",
 };
 
 export default function RootLayout({

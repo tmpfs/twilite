@@ -9,41 +9,14 @@ import { toast } from "sonner";
 import { useFlashToast } from "@/context/toast";
 import { LoadingScreen } from "@/components/LoadingIndicator";
 import { useFetchWithDelay } from "@/hooks/fetch";
+import { ErrorScreen } from "@/components/ErrorScreen";
 
 export default function EditPage() {
-  // const [page, setPage] = useState<Page | undefined>();
-  // const [loading, setLoading] = useState(true);
-  // const [error, setError] = useState<string | null>(null);
-
   const { flashToastAndNavigate } = useFlashToast();
-
   const pathname = usePathname();
   const segments = pathname.split("/").filter(Boolean);
   const router = useRouter();
   const pageName = segments[1];
-
-  /*
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await fetch(`/api/page/${pageName}`, {
-          headers: { Accept: "application/json" },
-        });
-        if (!res.ok) {
-          throw new Error(`HTTP request failed with status code ${res.status}`);
-        }
-        const page = await res.json();
-        setPage(page);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [pageName]);
-  */
 
   const state = useFetchWithDelay(
     () =>
@@ -93,7 +66,9 @@ export default function EditPage() {
   if (state.status === "loading") {
     return <LoadingScreen />;
   } else if (state.status === "error") {
-    return <p>Error: {state.error.message}</p>;
+    return (
+      <ErrorScreen title="Network error">{state.error.message}</ErrorScreen>
+    );
   } else if (state.status === "success") {
     const page = state.data as Page;
     return (
@@ -110,26 +85,4 @@ export default function EditPage() {
   } else {
     throw new Error("unsupported fetch loader state");
   }
-
-  /*
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p>Error: {error}</p>;
-
-  if (segments.length < 2) {
-    return <NotFound />;
-  }
-
-
-  return (
-    <NoSsr>
-      <PageForm
-        page={page as Page}
-        edit
-        onDelete={onDelete}
-        onCancel={onCancel}
-        onSuccess={onSuccess}
-      />
-    </NoSsr>
-  );
-  */
 }

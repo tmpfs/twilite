@@ -9,6 +9,7 @@ import { formatUtcDateTime } from "@/lib/helpers";
 import Link from "next/link";
 import { useFetchWithDelay } from "@/hooks/fetch";
 import { Edit } from "lucide-react";
+import { ErrorScreen } from "@/components/ErrorScreen";
 
 export default function WikiRouter() {
   const pathname = usePathname();
@@ -41,7 +42,9 @@ function WikiIndex() {
   if (state.status === "loading") {
     return <LoadingScreen />;
   } else if (state.status === "error") {
-    return <p>Error: {state.error.message}</p>;
+    return (
+      <ErrorScreen title="Network error">{state.error.message}</ErrorScreen>
+    );
   } else if (state.status === "success") {
     const pages = state.data as PagePreview[];
     return (
@@ -69,43 +72,7 @@ function WikiIndex() {
 }
 
 function WikiPage({ pageName }: { pageName: string }) {
-  // const [page, setPage] = useState<Page | undefined>();
-  // const [loading, setLoading] = useState(true);
-  // const [error, setError] = useState<string | undefined>();
   const router = useRouter();
-
-  /*
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await fetch(`/api/page/${pageName}?include_files=true`, {
-          headers: { Accept: "application/json" },
-        });
-        if (!res.ok) {
-          if (res.status === 404) {
-            return router.push(`/new/${pageName}`);
-          } else {
-            throw new Error(
-              `HTTP request failed with status code ${res.status}`,
-            );
-          }
-        }
-        const page = await res.json();
-        console.log(page);
-        setPage(page);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [pageName]);
-
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p>Error: {error}</p>;
-  */
 
   const state = useFetchWithDelay(
     () =>
@@ -129,7 +96,9 @@ function WikiPage({ pageName }: { pageName: string }) {
   if (state.status === "loading") {
     return <LoadingScreen />;
   } else if (state.status === "error") {
-    return <p>Error: {state.error.message}</p>;
+    return (
+      <ErrorScreen title="Network error">{state.error.message}</ErrorScreen>
+    );
   } else if (state.status === "success") {
     const page = state.data as Page;
     return (
