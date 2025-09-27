@@ -11,7 +11,7 @@ use axum::{
     body::Bytes,
     extract::{Multipart, Path, Query},
     http::{HeaderMap, StatusCode, Uri, header},
-    response::{Html, IntoResponse, Redirect, Response},
+    response::{IntoResponse, Redirect, Response},
 };
 use axum_extra::extract::OptionalQuery;
 use rust_embed::RustEmbed;
