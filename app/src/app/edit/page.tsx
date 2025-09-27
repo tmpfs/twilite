@@ -4,15 +4,17 @@ import { PageForm } from "@/components/PageForm";
 import { NotFound } from "@/components/NotFound";
 import NoSsr from "@/components/NoSsr";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
 import type { Page } from "@/lib/model";
 import { toast } from "sonner";
 import { useFlashToast } from "@/context/toast";
+import { LoadingScreen } from "@/components/LoadingIndicator";
+import { useFetchWithDelay } from "@/hooks/fetch";
 
 export default function EditPage() {
-  const [page, setPage] = useState<Page | undefined>();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // const [page, setPage] = useState<Page | undefined>();
+  // const [loading, setLoading] = useState(true);
+  // const [error, setError] = useState<string | null>(null);
+
   const { flashToastAndNavigate } = useFlashToast();
 
   const pathname = usePathname();
@@ -20,6 +22,7 @@ export default function EditPage() {
   const router = useRouter();
   const pageName = segments[1];
 
+  /*
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -40,11 +43,22 @@ export default function EditPage() {
 
     fetchData();
   }, [pageName]);
+  */
+
+  const state = useFetchWithDelay(
+    () =>
+      fetch(`/api/page/${pageName}`, {
+        headers: { Accept: "application/json" },
+      }).then((res) => {
+        if (!res.ok) {
+          throw new Error(`HTTP request failed with status code ${res.status}`);
+        }
+        return res.json();
+      }),
+    [pageName],
+  );
 
   const onDelete = () => {
-    toast(`Wiki page ${page?.pageName} deleted`, { duration: 15000 });
-    router.push("/");
-
     flashToastAndNavigate(
       {
         type: "success",
@@ -67,15 +81,42 @@ export default function EditPage() {
   };
 
   const onCancel = () => {
-    router.push(`/wiki/${page?.pageName}`);
+    router.push(`/wiki/${pageName}`);
   };
 
+  if (segments.length < 2) {
+    return <NotFound />;
+  }
+
+  if (state.status === "loading") {
+    return <LoadingScreen />;
+  } else if (state.status === "error") {
+    return <p>Error: {state.error.message}</p>;
+  } else if (state.status === "success") {
+    const page = state.data as Page;
+    return (
+      <NoSsr>
+        <PageForm
+          page={page}
+          edit
+          onDelete={onDelete}
+          onCancel={onCancel}
+          onSuccess={onSuccess}
+        />
+      </NoSsr>
+    );
+  } else {
+    throw new Error("unsupported fetch loader state");
+  }
+
+  /*
   if (loading) return <p>Loading...</p>;
   if (error) return <p>Error: {error}</p>;
 
   if (segments.length < 2) {
     return <NotFound />;
   }
+
 
   return (
     <NoSsr>
@@ -88,4 +129,5 @@ export default function EditPage() {
       />
     </NoSsr>
   );
+  */
 }

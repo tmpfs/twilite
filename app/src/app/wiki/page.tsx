@@ -3,10 +3,11 @@ import { usePathname, useRouter } from "next/navigation";
 import NoSsr from "@/components/NoSsr";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
+import { LoadingScreen } from "@/components/LoadingIndicator";
 import type { Page, PagePreview } from "@/lib/model";
 import { formatUtcDateTime } from "@/lib/helpers";
 import Link from "next/link";
+import { useFetchWithDelay } from "@/hooks/fetch";
 
 export default function WikiRouter() {
   const pathname = usePathname();
@@ -23,62 +24,56 @@ export default function WikiRouter() {
 }
 
 function WikiIndex() {
-  const [pages, setPages] = useState<PagePreview[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | undefined>();
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await fetch(`/api/page/recent`, {
-          headers: { Accept: "application/json" },
-        });
+  const state = useFetchWithDelay(
+    () =>
+      fetch(`/api/page/recent`, {
+        headers: { Accept: "application/json" },
+      }).then((res) => {
         if (!res.ok) {
           throw new Error(`HTTP request failed with status code ${res.status}`);
         }
-        const pages = await res.json();
-        console.log(pages);
-        setPages(pages);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p>Error: {error}</p>;
-
-  return (
-    <div className="flex flex-col w-full p-4 space-y-2">
-      <h3>Recent pages</h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6 w-full">
-        {pages.map((page) => {
-          return (
-            <Link
-              href={`/wiki/${page.pageName}`}
-              key={page.pageName}
-              className="no-underline rounded-lg border border-muted shadow p-4 flex flex-col h-256px overflow-hidden"
-            >
-              <div className="text-muted-foreground">{page.pageName}</div>
-              <div className="truncate">{page.previewText}</div>
-            </Link>
-          );
-        })}
-      </div>
-    </div>
+        return res.json();
+      }),
+    [],
   );
+
+  if (state.status === "loading") {
+    return <LoadingScreen />;
+  } else if (state.status === "error") {
+    return <p>Error: {state.error.message}</p>;
+  } else if (state.status === "success") {
+    const pages = state.data as PagePreview[];
+    return (
+      <div className="flex flex-col w-full p-4 space-y-2">
+        <h3>Recent pages</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6 w-full">
+          {pages.map((page) => {
+            return (
+              <Link
+                href={`/wiki/${page.pageName}`}
+                key={page.pageName}
+                className="no-underline rounded-lg border border-muted shadow p-4 flex flex-col h-256px overflow-hidden"
+              >
+                <div className="text-muted-foreground">{page.pageName}</div>
+                <div className="truncate">{page.previewText}</div>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    );
+  } else {
+    throw new Error("unsupported fetch loader state");
+  }
 }
 
 function WikiPage({ pageName }: { pageName: string }) {
-  const [page, setPage] = useState<Page | undefined>();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | undefined>();
+  // const [page, setPage] = useState<Page | undefined>();
+  // const [loading, setLoading] = useState(true);
+  // const [error, setError] = useState<string | undefined>();
   const router = useRouter();
 
+  /*
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -109,28 +104,59 @@ function WikiPage({ pageName }: { pageName: string }) {
 
   if (loading) return <p>Loading...</p>;
   if (error) return <p>Error: {error}</p>;
+  */
 
-  return (
-    <div className="flex flex-col px-4">
-      <div className="flex justify-between space-x-4">
-        <h3 className="mt-2">{pageName}</h3>
-        <Button
-          onClick={() => router.push(`/edit/${pageName}`)}
-          variant="link"
-          className="p-0"
-        >
-          Edit
-        </Button>
-      </div>
-      <Separator />
-      <article
-        className="prose py-4"
-        dangerouslySetInnerHTML={{ __html: page?.pageContent || "" }}
-      />
-      <Separator />
-      <div className="flex text-muted-foreground mt-2">
-        {page && <small>{formatUtcDateTime(page?.updatedAt || "")}</small>}
-      </div>
-    </div>
+  const state = useFetchWithDelay(
+    () =>
+      fetch(`/api/page/${pageName}?include_files=true`, {
+        headers: { Accept: "application/json" },
+      }).then((res) => {
+        if (!res.ok) {
+          if (res.status === 404) {
+            return router.push(`/new/${pageName}`);
+          } else {
+            throw new Error(
+              `HTTP request failed with status code ${res.status}`,
+            );
+          }
+        }
+        return res.json();
+      }),
+    [pageName],
   );
+
+  if (state.status === "loading") {
+    return <LoadingScreen />;
+  } else if (state.status === "error") {
+    return <p>Error: {state.error.message}</p>;
+  } else if (state.status === "success") {
+    const page = state.data as Page;
+    return (
+      <div className="flex flex-col px-4">
+        <div className="flex justify-between space-x-4 items-center">
+          <h3 className="my-2 text-4xl font-semibold tracking-tight">
+            {pageName}
+          </h3>
+          <Button
+            onClick={() => router.push(`/edit/${pageName}`)}
+            variant="link"
+            className="p-0"
+          >
+            Edit
+          </Button>
+        </div>
+        <Separator />
+        <article
+          className="prose py-4"
+          dangerouslySetInnerHTML={{ __html: page?.pageContent || "" }}
+        />
+        <Separator />
+        <div className="flex text-muted-foreground mt-2 justify-end">
+          {page && <small>{formatUtcDateTime(page?.updatedAt || "")}</small>}
+        </div>
+      </div>
+    );
+  } else {
+    throw new Error("unsupported fetch loader state");
+  }
 }

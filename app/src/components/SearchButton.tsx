@@ -13,7 +13,7 @@ export function SearchButton() {
       <Search className="h-4 w-4" />
       <span className="flex-1 text-left">Search...</span>
       <kbd className="pointer-events-none inline-flex items-center rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100">
-        Ctrl K
+        Ctrl+K
       </kbd>
     </Button>
   );

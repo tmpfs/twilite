@@ -8,9 +8,9 @@ import { SearchButton } from "@/components/SearchButton";
 
 export function Header() {
   return (
-    <header className="flex items-center justify-between bg-card px-4 py-2 text-sm">
+    <header className="flex items-center justify-between bg-card px-4 py-2">
       <div className="shrink">
-        <Button asChild variant="link" className="p-0 h-auto">
+        <Button asChild variant="link" className="p-0 h-auto text-lg">
           <Link href="/wiki">Wiki</Link>
         </Button>
       </div>

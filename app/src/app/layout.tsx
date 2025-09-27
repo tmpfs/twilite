@@ -27,9 +27,9 @@ export default function RootLayout({
         disableTransitionOnChange
       >
         <SearchProvider>
-          <body className="flex flex-col">
+          <body className="flex flex-col text-base sm:text-lg md:text-xl lg:text-2xl">
             <Header />
-            <main>
+            <main className="flex-1">
               <Suspense fallback={null}>
                 <ToastProvider>{children}</ToastProvider>
               </Suspense>
