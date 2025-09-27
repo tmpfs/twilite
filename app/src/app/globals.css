@@ -169,3 +169,8 @@ code {
   font-family: var(--font-sans);
   color: var(--muted-foreground);
 }
+
+li > p {
+  margin: 0;
+  padding: 0;
+}
