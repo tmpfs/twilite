@@ -15,12 +15,14 @@ export function Header() {
         </Button>
       </div>
       <div className="space-x-4 flex">
-        <Button asChild variant="secondary">
-          <div className="flex">
-            <Plus />
-            <Link href="/new">New page</Link>
-          </div>
-        </Button>
+        <Link href="/new">
+          <Button asChild variant="secondary">
+            <div className="flex">
+              <Plus />
+              <span>New page</span>
+            </div>
+          </Button>
+        </Link>
         <SearchButton />
         <ThemeToggle />
       </div>

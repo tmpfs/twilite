@@ -8,6 +8,7 @@ import type { Page, PagePreview } from "@/lib/model";
 import { formatUtcDateTime } from "@/lib/helpers";
 import Link from "next/link";
 import { useFetchWithDelay } from "@/hooks/fetch";
+import { Edit } from "lucide-react";
 
 export default function WikiRouter() {
   const pathname = usePathname();
@@ -134,16 +135,17 @@ function WikiPage({ pageName }: { pageName: string }) {
     return (
       <div className="flex flex-col px-4">
         <div className="flex justify-between space-x-4 items-center">
-          <h3 className="my-2 text-4xl font-semibold tracking-tight">
+          <h3 className="mt-8 mb-4 text-4xl font-semibold tracking-tight">
             {pageName}
           </h3>
-          <Button
-            onClick={() => router.push(`/edit/${pageName}`)}
-            variant="link"
-            className="p-0"
-          >
-            Edit
-          </Button>
+          <Link href={`/edit/${pageName}`}>
+            <Button asChild variant="secondary">
+              <div className="flex">
+                <Edit />
+                <span>Edit</span>
+              </div>
+            </Button>
+          </Link>
         </div>
         <Separator />
         <article
