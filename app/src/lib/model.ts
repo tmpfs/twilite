@@ -2,6 +2,7 @@ export type Page = {
   pageUuid?: string;
   pageName: string;
   pageContent: string;
+  pageToc: string;
   updatedAt: string;
 };
 

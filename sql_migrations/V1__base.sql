@@ -6,7 +6,8 @@ CREATE TABLE IF NOT EXISTS pages
     page_uuid             TEXT                UNIQUE NOT NULL,
     page_name             TEXT                UNIQUE NOT NULL,
     page_content          TEXT                NULL,
-    page_text             TEXT                NULL
+    page_text             TEXT                NULL,
+    page_toc              TEXT                NULL
 );
 
 CREATE INDEX IF NOT EXISTS page_uuid

@@ -105,6 +105,7 @@ async fn api_select_page_json(
     }
 }
 
+#[axum_macros::debug_handler]
 pub async fn api_insert_page(
     Extension(state): Extension<Arc<ServerState>>,
     mut multipart: Multipart,
@@ -139,12 +140,14 @@ pub async fn api_insert_page(
         .collect::<Vec<_>>();
 
     let client = state.client.lock().await;
+
     match PageEntity::add(&client, page_name, page_content, uploads).await {
         Ok(_) => Ok(StatusCode::OK.into_response()),
         Err(e) => Err(e),
     }
 }
 
+#[axum_macros::debug_handler]
 pub async fn api_update_page(
     Extension(state): Extension<Arc<ServerState>>,
     Path(page_uuid): Path<Uuid>,
@@ -168,6 +171,7 @@ pub async fn api_update_page(
     };
 
     let client = state.client.lock().await;
+
     PageEntity::edit(&client, page_uuid, page_name, page_content)
         .await
         .map(|_| StatusCode::OK.into_response())

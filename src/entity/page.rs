@@ -1,8 +1,9 @@
 use crate::{
     entity::file::{FileEntity, FileResponse},
     error::ServerError,
-    helpers::{html_to_text, rewrite_wiki_links, sanitize_html, trim_preview_text},
-    toc::generate_toc,
+    helpers::{
+        generate_toc, html_to_text, sanitize_html, stringify_doc, transform_page, trim_preview_text,
+    },
 };
 use async_sqlite::{Client, Error::Rusqlite, rusqlite};
 use axum::body::Bytes;
@@ -21,6 +22,7 @@ pub struct PageEntity {
     pub page_name: String,
     pub page_content: String,
     pub page_text: String,
+    pub page_toc: Option<String>,
     pub page_files: Vec<FileEntity>,
 }
 
@@ -33,6 +35,7 @@ pub struct PageResponse {
     updated_at: String,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     page_files: Vec<FileResponse>,
+    page_toc: Option<String>,
 }
 
 impl From<PageEntity> for PageResponse {
@@ -41,6 +44,7 @@ impl From<PageEntity> for PageResponse {
             page_uuid: value.page_uuid,
             page_name: value.page_name,
             page_content: value.page_content,
+            page_toc: value.page_toc,
             updated_at: value.updated_at,
             page_files: value
                 .page_files
@@ -87,17 +91,21 @@ impl PageEntity {
     ) -> Result<(), ServerError> {
         let query = sql::Insert::new()
             .insert_into(
-                "pages (created_at, updated_at, page_uuid, page_name, page_content, page_text)",
+                "pages (created_at, updated_at, page_uuid, page_name, page_content, page_text, page_toc)",
             )
-            .values("(?1, ?2, ?3, ?4, ?5, ?6)");
+            .values("(?1, ?2, ?3, ?4, ?5, ?6, ?7)");
 
         let now = UtcDateTime::now();
         let created_at = now.format(&Rfc3339)?;
         let updated_at = now.format(&Rfc3339)?;
         let page_uuid = Uuid::new_v4();
-        let page_content = sanitize_html(&page_content);
-        let page_content = rewrite_wiki_links(&page_content)?;
-        let page_text = html_to_text(&page_content);
+        let (page_content, page_text, page_toc) = {
+            let page_content = sanitize_html(&page_content);
+            let document = transform_page(&page_content)?;
+            let page_text = html_to_text(&document);
+            let toc = generate_toc(&document);
+            (stringify_doc(&document)?, page_text, toc)
+        };
         match client
             .conn_mut(move |conn| {
                 let tx = conn.transaction()?;
@@ -110,6 +118,7 @@ impl PageEntity {
                         page_name,
                         page_content,
                         page_text,
+                        page_toc
                     ),
                 )?;
 
@@ -178,14 +187,22 @@ impl PageEntity {
     ) -> Result<(), ServerError> {
         let query = sql::Update::new()
             .update("pages")
-            .set("updated_at = ?1, page_name = ?2, page_content = ?3, page_text = ?4")
-            .where_clause("page_uuid = ?5");
+            .set(
+                "updated_at = ?1, page_name = ?2, page_content = ?3, page_text = ?4, page_toc = ?5",
+            )
+            .where_clause("page_uuid = ?6");
 
         let now = UtcDateTime::now();
         let updated_at = now.format(&Rfc3339)?;
-        let page_content = sanitize_html(&page_content);
-        let page_content = rewrite_wiki_links(&page_content)?;
-        let page_text = html_to_text(&page_content);
+
+        let (page_content, page_text, page_toc) = {
+            let page_content = sanitize_html(&page_content);
+            let document = transform_page(&page_content)?;
+            let page_text = html_to_text(&document);
+            let toc = generate_toc(&document);
+            (stringify_doc(&document)?, page_text, toc)
+        };
+
         client
             .conn(move |conn| {
                 let mut stmt = conn.prepare_cached(&query.as_string())?;
@@ -194,6 +211,7 @@ impl PageEntity {
                     page_name,
                     page_content,
                     page_text,
+                    page_toc,
                     page_uuid.to_string(),
                 ))?;
                 Ok(())
@@ -210,7 +228,7 @@ impl PageEntity {
     ) -> Result<Self, ServerError> {
         let query = sql::Select::new()
             .select(
-                "page_id, created_at, updated_at, page_uuid, page_name, page_content, page_text",
+                "page_id, created_at, updated_at, page_uuid, page_name, page_content, page_text, page_toc",
             )
             .from("pages")
             .where_clause("page_name = ?1");
@@ -229,6 +247,7 @@ impl PageEntity {
                         page_name: row.get("page_name")?,
                         page_content: row.get("page_content")?,
                         page_text: row.get("page_text")?,
+                        page_toc: row.get("page_toc")?,
                         page_files: Vec::new(),
                     })
                 })
@@ -272,6 +291,7 @@ impl PageEntity {
                         page_name: row.get("page_name")?,
                         page_content: row.get("page_content")?,
                         page_text: row.get("page_text")?,
+                        page_toc: row.get("page_toc")?,
                         page_files: Vec::new(),
                     };
                     pages.push(page_entity);

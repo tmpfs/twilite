@@ -8,7 +8,7 @@ import { useFlashToast } from "@/context/toast";
 export default function NewPage() {
   const pathname = usePathname();
   const segments = pathname.split("/").filter(Boolean);
-  const page = { pageName: segments[1] || "", pageContent: "", updatedAt: "" };
+  const page = { pageName: segments[1] || "", pageContent: "", pageToc: "", updatedAt: "" };
   const { flashToastAndNavigate } = useFlashToast();
 
   const onSuccess = (pageName: string) => {

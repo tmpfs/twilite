@@ -102,11 +102,14 @@ function WikiPage({ pageName }: { pageName: string }) {
     );
   } else if (state.status === "success") {
     
-    const WikiPageContents = () => (
-      <aside className="prose py-2">
-        <h3>Contents</h3>
-      </aside>
-    );
+    const WikiPageContents = () => {
+      if (!page.pageToc) return null;
+      return (<aside className="prose py-2">
+        <div
+          dangerouslySetInnerHTML={{ __html: page?.pageToc || "" }}
+        ></div>
+      </aside>);
+    };
 
     const page = state.data as Page;
     return (
