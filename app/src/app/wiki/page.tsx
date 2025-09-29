@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useFetchWithDelay } from "@/hooks/fetch";
 import { Edit } from "lucide-react";
 import { ErrorScreen } from "@/components/ErrorScreen";
+import { WithTableOfContents } from "@/components/WithTableOfContents";
 
 export default function WikiRouter() {
   const pathname = usePathname();
@@ -100,32 +101,43 @@ function WikiPage({ pageName }: { pageName: string }) {
       <ErrorScreen title="Network error">{state.error.message}</ErrorScreen>
     );
   } else if (state.status === "success") {
+    
+    const WikiPageContents = () => (
+      <aside className="prose py-2">
+        <h3>Contents</h3>
+      </aside>
+    );
+
     const page = state.data as Page;
     return (
-      <div className="flex flex-col px-4">
-        <div className="flex justify-between space-x-4 items-center">
-          <h3 className="mt-8 mb-4 text-4xl font-semibold tracking-tight">
-            {pageName}
-          </h3>
-          <Link href={`/edit/${pageName}`}>
-            <Button asChild variant="secondary">
-              <div className="flex">
-                <Edit />
-                <span>Edit</span>
-              </div>
-            </Button>
-          </Link>
+        <div className="flex flex-col px-4">
+          <div className="flex justify-between space-x-4 items-center">
+            <h3 className="mt-8 mb-4 text-4xl font-semibold tracking-tight">
+              {pageName}
+            </h3>
+            <Link href={`/edit/${pageName}`}>
+              <Button asChild variant="secondary">
+                <div className="flex">
+                  <Edit />
+                  <span>Edit</span>
+                </div>
+              </Button>
+            </Link>
+          </div>
+          <Separator />
+          <WithTableOfContents
+            contents=<WikiPageContents />
+          >
+            <article
+              className="prose py-4"
+              dangerouslySetInnerHTML={{ __html: page?.pageContent || "" }}
+            />
+          </WithTableOfContents>
+          <Separator />
+          <div className="flex text-muted-foreground mt-2 justify-end">
+            {page && <small>{formatUtcDateTime(page?.updatedAt || "")}</small>}
+          </div>
         </div>
-        <Separator />
-        <article
-          className="prose py-4"
-          dangerouslySetInnerHTML={{ __html: page?.pageContent || "" }}
-        />
-        <Separator />
-        <div className="flex text-muted-foreground mt-2 justify-end">
-          {page && <small>{formatUtcDateTime(page?.updatedAt || "")}</small>}
-        </div>
-      </div>
     );
   } else {
     throw new Error("unsupported fetch loader state");

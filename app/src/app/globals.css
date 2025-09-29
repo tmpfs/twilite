@@ -49,16 +49,6 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-html,
-body {
-  height: 100%;
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-}
-
 :root {
   --radius: 0.625rem;
   --background: oklch(1 0 0);
@@ -137,6 +127,16 @@ body {
   }
 }
 
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
 @plugin "@tailwindcss/typography";
 
 .prose h1,
@@ -170,7 +170,7 @@ code {
   color: var(--muted-foreground);
 }
 
-li > p {
+li > p, li {
   margin: 0;
   padding: 0;
 }

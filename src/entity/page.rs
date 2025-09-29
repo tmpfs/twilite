@@ -2,6 +2,7 @@ use crate::{
     entity::file::{FileEntity, FileResponse},
     error::ServerError,
     helpers::{html_to_text, rewrite_wiki_links, sanitize_html, trim_preview_text},
+    toc::generate_toc,
 };
 use async_sqlite::{Client, Error::Rusqlite, rusqlite};
 use axum::body::Bytes;

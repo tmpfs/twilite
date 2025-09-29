@@ -38,7 +38,7 @@ export default function RootLayout({
                 <ToastProvider>{children}</ToastProvider>
               </Suspense>
             </main>
-            <footer></footer>
+            <footer className="mb-4"></footer>
             <Toaster position="top-center" className="font-sans" />
             <SearchMenu />
           </body>
