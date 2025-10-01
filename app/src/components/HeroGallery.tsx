@@ -6,6 +6,8 @@ import {
   CarouselApi,
   CarouselContent,
   CarouselItem,
+  CarouselPrevious,
+  CarouselNext,
 } from "@/components/ui/carousel";
 
 interface HeroGalleryProps {
@@ -28,36 +30,8 @@ export function HeroGallery({ images }: HeroGalleryProps) {
     };
   }, [api]);
 
-
-    /* onCreate={(api) => setApi(api)} */
-
-  return (
-    <div className="relative w-full">
-      {/* Hero Carousel */}
-      <Carousel
-        className="w-full"
-        opts={{ loop: true }}
-      >
-        <CarouselContent>
-          {images.map((img, idx) => (
-            <CarouselItem key={idx} className="relative h-[60vh] md:h-[80vh]">
-              <img
-                src={img.url}
-                alt={img.alt ?? ""}
-                className="absolute inset-0 w-full h-full object-cover"
-              />
-              {/* Optional overlay for text */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent flex items-end p-6">
-                <h2 className="text-white text-2xl md:text-4xl font-bold drop-shadow">
-                  {img.alt}
-                </h2>
-              </div>
-            </CarouselItem>
-          ))}
-        </CarouselContent>
-      </Carousel>
-
-      {/* Dots */}
+  
+  /*
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">
         {images.map((_, i) => (
           <button
@@ -69,8 +43,10 @@ export function HeroGallery({ images }: HeroGalleryProps) {
           />
         ))}
       </div>
+      */
 
-      {/* Thumbnails */}
+    
+     /*
       <div className="mt-4 flex justify-center gap-2">
         {images.map((img, i) => (
           <button
@@ -90,6 +66,35 @@ export function HeroGallery({ images }: HeroGalleryProps) {
           </button>
         ))}
       </div>
-    </div>
+      */
+
+
+
+    /* onCreate={(api) => setApi(api)} */
+
+  return (
+    <Carousel opts={{ loop: false }}
+
+      className="h-[30vh] md:h-[40vh] items-center"
+    >
+      <CarouselPrevious />
+      
+      <CarouselContent>
+        {images.map((img, idx) => (
+          <CarouselItem
+            key={idx}
+            className="h-[30vh] md:h-[40vh] items-center"
+          >
+            <img
+              src={img.url}
+              alt={img.alt ?? ""}
+              className="object-cover"
+            />
+          </CarouselItem>
+        ))}
+      </CarouselContent>
+      
+      <CarouselNext />
+    </Carousel>
   );
 }
