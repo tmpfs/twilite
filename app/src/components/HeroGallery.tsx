@@ -73,28 +73,25 @@ export function HeroGallery({ images }: HeroGalleryProps) {
     /* onCreate={(api) => setApi(api)} */
 
   return (
-    <Carousel opts={{ loop: false }}
-
-      className="h-[30vh] md:h-[40vh] items-center"
+    <Carousel
+      opts={{ loop: false }}
+      className="relative h-64 w-full overflow-hidden rounded-lg"
     >
-      <CarouselPrevious />
-      
-      <CarouselContent>
+      <CarouselContent className="h-full">
         {images.map((img, idx) => (
-          <CarouselItem
-            key={idx}
-            className="h-[30vh] md:h-[40vh] items-center"
+          <CarouselItem key={idx}
+            className="h-full w-full"
           >
             <img
               src={img.url}
               alt={img.alt ?? ""}
-              className="object-cover"
+              className="h-full w-full object-cover object-center"
             />
           </CarouselItem>
         ))}
       </CarouselContent>
-      
-      <CarouselNext />
+      <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 z-10" />
+      <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 z-10" />
     </Carousel>
   );
 }
