@@ -103,18 +103,18 @@ function WikiPage({ pageName }: { pageName: string }) {
     );
   } else if (state.status === "success") {
     
+    const page = state.data as Page;
+
     const WikiPageContents = () => {
-      if (!page.pageToc) return null;
       return (<aside className="prose py-2">
         <div
           dangerouslySetInnerHTML={{ __html: page?.pageToc || "" }}
         ></div>
       </aside>);
-    };
+    }
 
-    const page = state.data as Page;
     const images = (page.pageFiles || []).filter((file) => file.contentType.startsWith("image/jpeg")).map((file) => {
-      return {url: `/files/${file.fileName}`};
+      return {url: `/files/${file.fileUuid}`};
     });
 
     return (
@@ -134,15 +134,15 @@ function WikiPage({ pageName }: { pageName: string }) {
           </div>
           <Separator />
           <WithTableOfContents
-            contents=<WikiPageContents />
+            contents={page.pageToc ? <WikiPageContents /> : null}
           >
-            <>
-            { images.length > 0 && <HeroGallery images={images} />}
-            <article
-              className="prose py-4"
-              dangerouslySetInnerHTML={{ __html: page?.pageContent || "" }}
-            />
-            </>
+            <div className="flex flex-col">
+              { images.length > 0 && <HeroGallery images={images} />}
+              <article
+                className="prose py-4"
+                dangerouslySetInnerHTML={{ __html: page?.pageContent || "" }}
+              />
+            </div>
           </WithTableOfContents>
           <Separator />
           <div className="flex text-muted-foreground mt-2 justify-end">

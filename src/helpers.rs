@@ -135,7 +135,10 @@ pub fn generate_toc(document: &NodeRef) -> Option<String> {
     generate_toc_with_links(document, None)
 }
 
-fn generate_toc_with_links(document: &NodeRef, text_to_slug: Option<&HashMap<String, String>>) -> Option<String> {
+fn generate_toc_with_links(
+    document: &NodeRef,
+    text_to_slug: Option<&HashMap<String, String>>,
+) -> Option<String> {
     let mut items = Vec::new();
     let selector = document.select("h1, h2, h3, h4, h5, h6").unwrap();
     for css_match in selector {
@@ -292,8 +295,6 @@ fn assign_ids_and_generate_toc(document: &NodeRef) -> Option<String> {
 mod test {
     use crate::helpers::{stringify_doc, transform_page};
     use anyhow::Result;
-    use kuchiki::parse_html;
-    use kuchiki::traits::*;
 
     #[test]
     fn html_wiki_links() -> Result<()> {
@@ -354,7 +355,13 @@ mod test {
         let html = "<h1>One</h1><h1>Two</h1>";
         // let html = parse_html().from_utf8().read_from(&mut html.as_bytes())?;
         let toc = transform_page(&html)?.1;
-        assert_eq!(toc, Some("<ul><li><a href=\"#one\">One</a></li><li><a href=\"#two\">Two</a></li></ul>".to_owned()));
+        assert_eq!(
+            toc,
+            Some(
+                "<ul><li><a href=\"#one\">One</a></li><li><a href=\"#two\">Two</a></li></ul>"
+                    .to_owned()
+            )
+        );
         Ok(())
     }
 

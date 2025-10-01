@@ -182,6 +182,7 @@ impl PageEntity {
         page_uuid: Uuid,
         page_name: String,
         page_content: String,
+        uploads: Vec<PageUpload>,
     ) -> Result<(), ServerError> {
         let query = sql::Update::new()
             .update("pages")

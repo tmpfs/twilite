@@ -1,5 +1,5 @@
 use crate::error::ServerError;
-use async_sqlite::Client;
+use async_sqlite::{Client, Error::Rusqlite, rusqlite};
 use sql_query_builder as sql;
 use uuid::Uuid;
 
@@ -70,5 +70,34 @@ impl FileEntity {
             })
             .await?;
         Ok(files)
+    }
+
+    pub async fn find_buffer_by_uuid(
+        client: &Client,
+        file_uuid: Uuid,
+    ) -> Result<(usize, String, Vec<u8>), ServerError> {
+        let query = sql::Select::new()
+            .select("file_size, content_type, file_content")
+            .from("files")
+            .where_clause("file_uuid = ?1");
+
+        let content: Result<(usize, String, Vec<u8>), async_sqlite::Error> = client
+            .conn(move |conn| {
+                let mut stmt = conn.prepare_cached(&query.as_string())?;
+                stmt.query_row([file_uuid.to_string()], |row| {
+                    Ok((
+                        row.get("file_size")?,
+                        row.get("content_type")?,
+                        row.get("file_content")?,
+                    ))
+                })
+            })
+            .await;
+
+        match content {
+            Ok(entity) => Ok(entity),
+            Err(Rusqlite(rusqlite::Error::QueryReturnedNoRows)) => Err(ServerError::NotFound),
+            Err(e) => Err(e.into()),
+        }
     }
 }

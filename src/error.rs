@@ -30,6 +30,8 @@ pub enum ServerError {
     Time(#[from] time::error::Format),
     #[error(transparent)]
     Sqlite(#[from] async_sqlite::Error),
+    #[error(transparent)]
+    Http(#[from] axum::http::Error),
 }
 
 // Implement `IntoResponse` for the error

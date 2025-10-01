@@ -1,5 +1,6 @@
 use crate::{
     entity::{
+        file::FileEntity,
         page::{PageEntity, PagePreview, PageResponse, PageSelectOptions, PageUpload},
         search::{SearchEntity, SearchQuery, SearchRecord},
     },
@@ -22,6 +23,20 @@ use uuid::Uuid;
 #[derive(RustEmbed)]
 #[folder = "app/out"]
 struct Assets;
+
+pub async fn api_file_content(
+    Extension(state): Extension<Arc<ServerState>>,
+    Path(file_uuid): Path<Uuid>,
+) -> Result<Response, ServerError> {
+    let client = state.client.lock().await;
+    let (file_size, content_type, content) =
+        FileEntity::find_buffer_by_uuid(&client, file_uuid).await?;
+    let response = Response::builder()
+        .header(header::CONTENT_TYPE, content_type)
+        .header(header::CONTENT_LENGTH, file_size.to_string())
+        .body(axum::body::Body::from(content))?;
+    Ok(response)
+}
 
 pub async fn api_search(
     Extension(state): Extension<Arc<ServerState>>,
@@ -78,7 +93,6 @@ pub async fn api_select_page_content(
 
 pub async fn api_recent_pages(
     Extension(state): Extension<Arc<ServerState>>,
-    headers: HeaderMap,
 ) -> Result<Response, ServerError> {
     let client = state.client.lock().await;
     match PageEntity::find_recent(&client).await {
@@ -105,7 +119,6 @@ async fn api_select_page_json(
     }
 }
 
-#[axum_macros::debug_handler]
 pub async fn api_insert_page(
     Extension(state): Extension<Arc<ServerState>>,
     mut multipart: Multipart,
@@ -147,7 +160,6 @@ pub async fn api_insert_page(
     }
 }
 
-#[axum_macros::debug_handler]
 pub async fn api_update_page(
     Extension(state): Extension<Arc<ServerState>>,
     Path(page_uuid): Path<Uuid>,
@@ -155,13 +167,19 @@ pub async fn api_update_page(
 ) -> Result<Response, ServerError> {
     let mut page_name = None;
     let mut page_content = None;
+    let mut uploads: Vec<(Option<String>, Option<String>, Bytes)> = vec![];
 
     while let Some(field) = multipart.next_field().await.unwrap() {
-        let name = field.name().unwrap().to_string();
-        let value = field.text().await.unwrap();
-        match name.as_str() {
-            "pageName" => page_name = Some(value),
-            "pageContent" => page_content = Some(value),
+        match field.name().unwrap() {
+            "pageName" => page_name = Some(field.text().await.unwrap()),
+            "pageContent" => page_content = Some(field.text().await.unwrap()),
+            "uploads" => {
+                uploads.push((
+                    field.file_name().map(|s| s.to_owned()),
+                    field.content_type().map(|s| s.to_owned()),
+                    field.bytes().await?,
+                ));
+            }
             _ => {}
         }
     }
@@ -170,9 +188,15 @@ pub async fn api_update_page(
         return Ok(StatusCode::BAD_REQUEST.into_response());
     };
 
+    let uploads = uploads
+        .into_iter()
+        .filter(|u| u.0.is_some() && u.1.is_some())
+        .map(|u| PageUpload(u.0.unwrap(), u.1.unwrap(), u.2))
+        .collect::<Vec<_>>();
+
     let client = state.client.lock().await;
 
-    PageEntity::edit(&client, page_uuid, page_name, page_content)
+    PageEntity::edit(&client, page_uuid, page_name, page_content, uploads)
         .await
         .map(|_| StatusCode::OK.into_response())
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import {
   Carousel,
   CarouselApi,
@@ -42,12 +41,10 @@ export function HeroGallery({ images }: HeroGalleryProps) {
         <CarouselContent>
           {images.map((img, idx) => (
             <CarouselItem key={idx} className="relative h-[60vh] md:h-[80vh]">
-              <Image
+              <img
                 src={img.url}
                 alt={img.alt ?? ""}
-                fill
-                priority={idx === 0}
-                className="object-cover"
+                className="absolute inset-0 w-full h-full object-cover"
               />
               {/* Optional overlay for text */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent flex items-end p-6">
@@ -85,11 +82,10 @@ export function HeroGallery({ images }: HeroGalleryProps) {
             }`}
             onClick={() => api?.scrollTo(i)}
           >
-            <Image
+            <img
               src={img.url}
               alt={img.alt ?? ""}
-              fill
-              className="object-cover"
+              className="absolute inset-0 w-full h-full object-cover"
             />
           </button>
         ))}

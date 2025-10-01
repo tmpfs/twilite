@@ -3,6 +3,7 @@ use anyhow::Result;
 use async_sqlite::Client;
 use axum::{
     Extension, Router,
+    extract::DefaultBodyLimit,
     routing::{get, post},
 };
 use std::collections::HashMap;
@@ -78,6 +79,7 @@ impl Server {
 
         let mut app = Router::new()
             .route("/login/github", get(github::login))
+            .route("/files/{file_uuid}", get(routes::api_file_content))
             .route("/api/search", get(routes::api_search))
             .route("/api/page", post(routes::api_insert_page))
             .route(
@@ -158,7 +160,9 @@ impl Server {
             }
         );
 
-        app = app.layer(Extension(state.clone()));
+        app = app
+            .layer(Extension(state.clone()))
+            .layer(DefaultBodyLimit::max(50 * 1024 * 1024));
 
         let listener = tokio::net::TcpListener::bind(config.bind).await?;
         tracing::info!("listening on {}", listener.local_addr().unwrap());
