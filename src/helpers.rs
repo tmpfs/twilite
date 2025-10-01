@@ -173,23 +173,26 @@ fn generate_toc_with_links(document: &NodeRef, text_to_slug: Option<&HashMap<Str
             let current = *stack.last().unwrap();
 
             if level > current {
-                for l in (current + 1)..=level {
-                    out.push_str("<ul><li>");
-                    if l == level {
-                        out.push_str(&content);
-                    }
-                    stack.push(l);
-                }
+                // Create only ONE <ul> for the new nesting level, regardless of how many levels we skip
+                out.push_str("<ul><li>");
+                out.push_str(&content);
+                stack.push(level);
             } else if level == current {
                 out.push_str("</li><li>");
                 out.push_str(&content);
             } else {
+                // Unwind stack to target level
                 while !stack.is_empty() && *stack.last().unwrap() > level {
                     out.push_str("</li></ul>");
                     stack.pop();
                 }
                 out.push_str("</li><li>");
                 out.push_str(&content);
+                // Update the stack to reflect the current level
+                if !stack.is_empty() {
+                    stack.pop();
+                }
+                stack.push(level);
             }
         }
 
@@ -390,7 +393,7 @@ mod test {
         assert_eq!(
             toc,
             Some(
-                "<ul><li><a href=\"#one\">One</a><ul><li><ul><li><a href=\"#deep\">Deep</a></li></ul></li><li><a href=\"#back\">Back</a></li></ul></li></ul>"
+                "<ul><li><a href=\"#one\">One</a><ul><li><a href=\"#deep\">Deep</a></li></ul></li><li><a href=\"#back\">Back</a></li></ul>"
                     .to_owned()
             )
         );
