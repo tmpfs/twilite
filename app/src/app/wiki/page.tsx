@@ -11,6 +11,7 @@ import { useFetchWithDelay } from "@/hooks/fetch";
 import { Edit } from "lucide-react";
 import { ErrorScreen } from "@/components/ErrorScreen";
 import { WithTableOfContents } from "@/components/WithTableOfContents";
+import { HeroGallery } from '@/components/HeroGallery';
 
 export default function WikiRouter() {
   const pathname = usePathname();
@@ -112,6 +113,10 @@ function WikiPage({ pageName }: { pageName: string }) {
     };
 
     const page = state.data as Page;
+    const images = (page.pageFiles || []).filter((file) => file.contentType.startsWith("image/jpeg")).map((file) => {
+      return {url: `/files/${file.fileName}`};
+    });
+
     return (
         <div className="flex flex-col px-4">
           <div className="flex justify-between space-x-4 items-center">
@@ -131,14 +136,17 @@ function WikiPage({ pageName }: { pageName: string }) {
           <WithTableOfContents
             contents=<WikiPageContents />
           >
+            <>
+            { images.length > 0 && <HeroGallery images={images} />}
             <article
               className="prose py-4"
               dangerouslySetInnerHTML={{ __html: page?.pageContent || "" }}
             />
+            </>
           </WithTableOfContents>
           <Separator />
           <div className="flex text-muted-foreground mt-2 justify-end">
-            {page && <small>{formatUtcDateTime(page?.updatedAt || "")}</small>}
+            {page && <small className="text-sm">{formatUtcDateTime(page?.updatedAt || "")}</small>}
           </div>
         </div>
     );
