@@ -1,9 +1,7 @@
 use crate::{
     entity::file::{FileEntity, FileResponse},
     error::ServerError,
-    helpers::{
-        generate_toc, html_to_text, sanitize_html, stringify_doc, transform_page, trim_preview_text,
-    },
+    helpers::{html_to_text, sanitize_html, stringify_doc, transform_page, trim_preview_text},
 };
 use async_sqlite::{Client, Error::Rusqlite, rusqlite};
 use axum::body::Bytes;
@@ -101,9 +99,9 @@ impl PageEntity {
         let page_uuid = Uuid::new_v4();
         let (page_content, page_text, page_toc) = {
             let page_content = sanitize_html(&page_content);
-            let document = transform_page(&page_content)?;
+            let (document, toc) = transform_page(&page_content)?;
             let page_text = html_to_text(&document);
-            let toc = generate_toc(&document);
+            // let toc = generate_toc(&document);
             (stringify_doc(&document)?, page_text, toc)
         };
         match client
@@ -197,9 +195,8 @@ impl PageEntity {
 
         let (page_content, page_text, page_toc) = {
             let page_content = sanitize_html(&page_content);
-            let document = transform_page(&page_content)?;
+            let (document, toc) = transform_page(&page_content)?;
             let page_text = html_to_text(&document);
-            let toc = generate_toc(&document);
             (stringify_doc(&document)?, page_text, toc)
         };
 

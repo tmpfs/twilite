@@ -41,6 +41,9 @@
   --color-foreground: var(--foreground);
   --color-background: var(--background);
 
+  --link: oklch(0.48 0.16 245); /* mid blue */
+  --link-hover: oklch(0.40 0.18 245); /* deeper hover */
+
   /* --ease-fluid: cubic-bezier(0.3, 0, 0, 1); */
   /* --ease-snappy: cubic-bezier(0.2, 0, 0, 1); */
   --radius-sm: calc(var(--radius) - 4px);
@@ -116,6 +119,9 @@
   --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.551 0.027 264.364);
+
+  --link: oklch(0.72 0.16 245); /* lighter cyan-blue */
+  --link-hover: oklch(0.82 0.18 245); /* brighter hover */
 }
 
 @layer base {
@@ -160,9 +166,13 @@ code {
 }
 
 .prose a,
-.prose a:hover,
 .prose a:visited {
-  color: var(--accent-foreground);
+  color: var(--link);
+  transition: color 0.25s ease-in-out;
+}
+
+.prose a:hover {
+  color: var(--link-hover);
 }
 
 [data-sonner-toast] {

@@ -87,11 +87,11 @@ pub fn trim_preview_text(input: &str) -> &str {
     }
 }
 
-pub fn transform_page(input: &str) -> Result<NodeRef, ServerError> {
+pub fn transform_page(input: &str) -> Result<(NodeRef, Option<String>), ServerError> {
     let mut document = parse_html().from_utf8().read_from(&mut input.as_bytes())?;
     rewrite_wiki_links(&mut document)?;
-    assign_heading_ids(&document);
-    Ok(document)
+    let toc = assign_ids_and_generate_toc(&document);
+    Ok((document, toc))
 }
 
 pub fn stringify_doc(document: &NodeRef) -> Result<String, ServerError> {
@@ -132,6 +132,10 @@ fn rewrite_wiki_links(document: &mut NodeRef) -> Result<(), ServerError> {
 }
 
 pub fn generate_toc(document: &NodeRef) -> Option<String> {
+    generate_toc_with_links(document, None)
+}
+
+fn generate_toc_with_links(document: &NodeRef, text_to_slug: Option<&HashMap<String, String>>) -> Option<String> {
     let mut items = Vec::new();
     let selector = document.select("h1, h2, h3, h4, h5, h6").unwrap();
     for css_match in selector {
@@ -149,9 +153,19 @@ pub fn generate_toc(document: &NodeRef) -> Option<String> {
         let mut stack: Vec<usize> = Vec::new();
 
         for (level, text) in items {
+            let content = if let Some(slug_map) = text_to_slug {
+                if let Some(slug) = slug_map.get(&text) {
+                    format!("<a href=\"#{}\">{}</a>", slug, text)
+                } else {
+                    text
+                }
+            } else {
+                text
+            };
+
             if stack.is_empty() {
                 out.push_str("<ul><li>");
-                out.push_str(&text);
+                out.push_str(&content);
                 stack.push(level);
                 continue;
             }
@@ -162,20 +176,20 @@ pub fn generate_toc(document: &NodeRef) -> Option<String> {
                 for l in (current + 1)..=level {
                     out.push_str("<ul><li>");
                     if l == level {
-                        out.push_str(&text);
+                        out.push_str(&content);
                     }
                     stack.push(l);
                 }
             } else if level == current {
                 out.push_str("</li><li>");
-                out.push_str(&text);
+                out.push_str(&content);
             } else {
                 while !stack.is_empty() && *stack.last().unwrap() > level {
                     out.push_str("</li></ul>");
                     stack.pop();
                 }
                 out.push_str("</li><li>");
-                out.push_str(&text);
+                out.push_str(&content);
             }
         }
 
@@ -200,35 +214,80 @@ fn slugify(text: &str) -> String {
     slug.trim_matches('-').to_string()
 }
 
-/// Assign unique slugs as `id` attributes to all headings h1–h6 in the document
-fn assign_heading_ids(document: &NodeRef) {
+/// Generate unique slugs for headings, ensuring duplicates get numeric suffixes
+fn generate_unique_slugs(document: &NodeRef) -> HashMap<String, String> {
     let mut slug_counts: HashMap<String, usize> = HashMap::new();
+    let mut text_to_slug: HashMap<String, String> = HashMap::new();
+
     for css_match in document.select("h1, h2, h3, h4, h5, h6").unwrap() {
         let as_node = css_match.as_node();
-        if let Some(element) = as_node.as_element() {
+        if let Some(_element) = as_node.as_element() {
             let text = as_node.text_contents();
-            if text.trim().is_empty() {
+            let trimmed_text = text.trim();
+            if trimmed_text.is_empty() {
                 continue;
             }
 
-            let mut slug = slugify(&text);
-
-            // Check for duplicates and append numeric suffix if needed
+            let mut slug = slugify(trimmed_text);
             let count = slug_counts.entry(slug.clone()).or_insert(0);
             *count += 1;
             if *count > 1 {
                 slug = format!("{}-{}", slug, count);
             }
 
-            let mut attributes = element.attributes.borrow_mut();
-            attributes.insert("id", slug);
+            text_to_slug.insert(trimmed_text.to_string(), slug);
+        }
+    }
+
+    text_to_slug
+}
+
+/// Assign unique slugs as `id` attributes to all headings h1–h6 in the document
+fn assign_heading_ids(document: &NodeRef) {
+    let text_to_slug = generate_unique_slugs(document);
+
+    for css_match in document.select("h1, h2, h3, h4, h5, h6").unwrap() {
+        let as_node = css_match.as_node();
+        if let Some(element) = as_node.as_element() {
+            let text = as_node.text_contents();
+            let trimmed_text = text.trim();
+            if trimmed_text.is_empty() {
+                continue;
+            }
+
+            if let Some(slug) = text_to_slug.get(trimmed_text) {
+                let mut attributes = element.attributes.borrow_mut();
+                attributes.insert("id", slug.clone());
+            }
         }
     }
 }
 
+fn assign_ids_and_generate_toc(document: &NodeRef) -> Option<String> {
+    let text_to_slug = generate_unique_slugs(document);
+
+    for css_match in document.select("h1, h2, h3, h4, h5, h6").unwrap() {
+        let as_node = css_match.as_node();
+        if let Some(element) = as_node.as_element() {
+            let text = as_node.text_contents();
+            let trimmed_text = text.trim();
+            if trimmed_text.is_empty() {
+                continue;
+            }
+
+            if let Some(slug) = text_to_slug.get(trimmed_text) {
+                let mut attributes = element.attributes.borrow_mut();
+                attributes.insert("id", slug.clone());
+            }
+        }
+    }
+
+    generate_toc_with_links(document, Some(&text_to_slug))
+}
+
 #[cfg(test)]
 mod test {
-    use crate::helpers::{generate_toc, stringify_doc, transform_page};
+    use crate::helpers::{stringify_doc, transform_page};
     use anyhow::Result;
     use kuchiki::parse_html;
     use kuchiki::traits::*;
@@ -236,7 +295,7 @@ mod test {
     #[test]
     fn html_wiki_links() -> Result<()> {
         let html = r#"<p>This is a WikiPage with SomeOtherPage inside a paragraph.</p>"#;
-        let html = stringify_doc(&transform_page(html)?)?;
+        let html = stringify_doc(&transform_page(html)?.0)?;
         assert!(html.contains(r#"<a href="/wiki/WikiPage">WikiPage</a>"#));
         assert!(html.contains(r#"<a href="/wiki/SomeOtherPage">SomeOtherPage</a>"#));
         Ok(())
@@ -245,7 +304,7 @@ mod test {
     #[test]
     fn ignores_wiki_links_in_anchors() -> Result<()> {
         let html = r#"<p>This <a href="/existing">WikiPage and AnotherPage</a> should not be converted.</p>"#;
-        let html = stringify_doc(&transform_page(html)?)?;
+        let html = stringify_doc(&transform_page(html)?.0)?;
         // Should not contain new wiki links inside the existing anchor
         assert!(!html.contains(r#"<a href="/wiki/WikiPage">"#));
         assert!(!html.contains(r#"<a href="/wiki/AnotherPage">"#));
@@ -257,7 +316,7 @@ mod test {
     #[test]
     fn ignores_prefixed_wiki_links() -> Result<()> {
         let html = r#"<p>This !WikiPage should not be converted, but ThisPage should be.</p>"#;
-        let html = stringify_doc(&transform_page(html)?)?;
+        let html = stringify_doc(&transform_page(html)?.0)?;
         // Should not convert !WikiPage
         assert!(!html.contains(r#"<a href="/wiki/WikiPage">"#));
         assert!(html.contains("!WikiPage"));
@@ -269,7 +328,7 @@ mod test {
     #[test]
     fn handles_multiple_wiki_words() -> Result<()> {
         let html = r#"<p>Check out WikiPage and also SomeOtherPage for more info.</p>"#;
-        let html = stringify_doc(&transform_page(html)?)?;
+        let html = stringify_doc(&transform_page(html)?.0)?;
         assert!(html.contains(r#"<a href="/wiki/WikiPage">WikiPage</a>"#));
         assert!(html.contains(r#"<a href="/wiki/SomeOtherPage">SomeOtherPage</a>"#));
         Ok(())
@@ -278,7 +337,7 @@ mod test {
     #[test]
     fn preserves_non_wiki_words() -> Result<()> {
         let html = r#"<p>This iPhone and HTML are not WikiWords.</p>"#;
-        let html = stringify_doc(&transform_page(html)?)?;
+        let html = stringify_doc(&transform_page(html)?.0)?;
         // These should not be converted as they don't match the WikiWord pattern
         assert!(!html.contains(r#"<a href="/wiki/iPhone">"#));
         assert!(!html.contains(r#"<a href="/wiki/HTML">"#));
@@ -290,20 +349,20 @@ mod test {
     #[test]
     fn single_level() -> Result<()> {
         let html = "<h1>One</h1><h1>Two</h1>";
-        let html = parse_html().from_utf8().read_from(&mut html.as_bytes())?;
-        let toc = generate_toc(&html);
-        assert_eq!(toc, Some("<ul><li>One</li><li>Two</li></ul>".to_owned()));
+        // let html = parse_html().from_utf8().read_from(&mut html.as_bytes())?;
+        let toc = transform_page(&html)?.1;
+        assert_eq!(toc, Some("<ul><li><a href=\"#one\">One</a></li><li><a href=\"#two\">Two</a></li></ul>".to_owned()));
         Ok(())
     }
 
     #[test]
     fn nested_levels() -> Result<()> {
         let html = "<h1>One</h1><h2>Sub</h2><h1>Two</h1>";
-        let html = parse_html().from_utf8().read_from(&mut html.as_bytes())?;
-        let toc = generate_toc(&html);
+        // let html = parse_html().from_utf8().read_from(&mut html.as_bytes())?;
+        let toc = transform_page(&html)?.1;
         assert_eq!(
             toc,
-            Some("<ul><li>One<ul><li>Sub</li></ul></li><li>Two</li></ul>".to_owned())
+            Some("<ul><li><a href=\"#one\">One</a><ul><li><a href=\"#sub\">Sub</a></li></ul></li><li><a href=\"#two\">Two</a></li></ul>".to_owned())
         );
         Ok(())
     }
@@ -311,12 +370,12 @@ mod test {
     #[test]
     fn deeper_nesting() -> Result<()> {
         let html = "<h1>One</h1><h2>A</h2><h3>B</h3><h2>C</h2><h1>Two</h1>";
-        let html = parse_html().from_utf8().read_from(&mut html.as_bytes())?;
-        let toc = generate_toc(&html);
+        // let html = parse_html().from_utf8().read_from(&mut html.as_bytes())?;
+        let toc = transform_page(&html)?.1;
         assert_eq!(
             toc,
             Some(
-                "<ul><li>One<ul><li>A<ul><li>B</li></ul></li><li>C</li></ul></li><li>Two</li></ul>"
+                "<ul><li><a href=\"#one\">One</a><ul><li><a href=\"#a\">A</a><ul><li><a href=\"#b\">B</a></li></ul></li><li><a href=\"#c\">C</a></li></ul></li><li><a href=\"#two\">Two</a></li></ul>"
                     .to_owned()
             )
         );
@@ -326,12 +385,12 @@ mod test {
     #[test]
     fn nonsequential_levels() -> Result<()> {
         let html = "<h1>One</h1><h3>Deep</h3><h2>Back</h2>";
-        let html = parse_html().from_utf8().read_from(&mut html.as_bytes())?;
-        let toc = generate_toc(&html);
+        // let html = parse_html().from_utf8().read_from(&mut html.as_bytes())?;
+        let toc = transform_page(&html)?.1;
         assert_eq!(
             toc,
             Some(
-                "<ul><li>One<ul><li><ul><li>Deep</li></ul></li><li>Back</li></ul></li></ul>"
+                "<ul><li><a href=\"#one\">One</a><ul><li><ul><li><a href=\"#deep\">Deep</a></li></ul></li><li><a href=\"#back\">Back</a></li></ul></li></ul>"
                     .to_owned()
             )
         );
